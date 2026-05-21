@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>태양계 프로젝트 · Step 1 — 태양·지구·달</title>
+<title>태양계 프로젝트 · Step 2 — 8행성 + 실시간 천체력</title>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -11,43 +11,40 @@
     font-family: "Pretendard", "Malgun Gothic", system-ui, sans-serif; color: #e8ecf4; }
   canvas { display: block; }
 
-  /* ===== 좌상단 정보 패널 (HUD) ===== */
   #hud {
     position: fixed; top: 14px; left: 14px; z-index: 10;
-    background: rgba(8, 12, 26, 0.72); border: 1px solid rgba(120, 160, 240, 0.22);
+    background: rgba(8, 12, 26, 0.74); border: 1px solid rgba(120, 160, 240, 0.22);
     border-radius: 12px; padding: 14px 16px; backdrop-filter: blur(8px);
-    min-width: 248px; font-size: 13px; line-height: 1.45;
+    min-width: 256px; font-size: 13px; line-height: 1.45;
   }
-  #hud h1 { margin: 0 0 8px; font-size: 14px; letter-spacing: .3px;
-    color: #9ec3ff; font-weight: 700; }
+  #hud h1 { margin: 0 0 8px; font-size: 14px; color: #9ec3ff; font-weight: 700; }
   #hud .row { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; }
   #hud .row .k { color: #8b97b4; }
   #hud .row .v { color: #f2f5ff; font-variant-numeric: tabular-nums; text-align: right; }
   #hud .sep { height: 1px; background: rgba(120,160,240,.16); margin: 7px 0; }
 
-  /* ===== 하단 컨트롤 바 ===== */
   #controls {
     position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 10;
-    display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
-    background: rgba(8, 12, 26, 0.72); border: 1px solid rgba(120, 160, 240, 0.22);
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px;
+    background: rgba(8, 12, 26, 0.74); border: 1px solid rgba(120, 160, 240, 0.22);
     border-radius: 14px; padding: 8px 10px; backdrop-filter: blur(8px); max-width: 96vw;
   }
-  #controls button {
+  #controls button, #controls select {
     background: rgba(40, 56, 104, 0.55); color: #e8ecf4;
     border: 1px solid rgba(130, 165, 240, 0.28); border-radius: 9px;
     padding: 7px 11px; font-size: 12.5px; cursor: pointer; white-space: nowrap;
     font-family: inherit; transition: background .12s, border-color .12s;
   }
-  #controls button:hover { background: rgba(70, 96, 168, 0.75); border-color: #9ec3ff; }
+  #controls button:hover, #controls select:hover { background: rgba(70, 96, 168, 0.75); }
   #controls button.on { background: #2f6bd8; border-color: #9ec3ff; }
   #controls .div { width: 1px; align-self: stretch; background: rgba(120,160,240,.22); margin: 2px 4px; }
+  #controls label { color: #8b97b4; font-size: 12px; }
 
   #hint {
     position: fixed; right: 14px; bottom: 14px; z-index: 10; font-size: 11.5px;
     color: #6f7c9c; text-align: right; line-height: 1.5; pointer-events: none;
   }
 
-  /* ===== 로딩 / 오류 오버레이 ===== */
   #loading {
     position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 14px;
@@ -60,22 +57,25 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   #loading p { margin: 0; color: #c7d2ec; }
-  #loading .sub { font-size: 12px; color: #6f7c9c; max-width: 380px; }
+  #loading .sub { font-size: 12px; color: #6f7c9c; max-width: 400px; }
   #loading.error .spinner { display: none; }
 </style>
 </head>
 <body>
 
 <div id="hud">
-  <h1>🪐 태양계 프로젝트 · Step 1</h1>
+  <h1>🪐 태양계 프로젝트 · Step 2</h1>
   <div class="row"><span class="k">모의 시각</span><span class="v" id="hudLocal">—</span></div>
   <div class="row"><span class="k">UTC</span><span class="v" id="hudUTC">—</span></div>
   <div class="row"><span class="k">시간 배속</span><span class="v" id="hudSpeed">—</span></div>
   <div class="sep"></div>
+  <div class="row"><span class="k">초점</span><span class="v" id="hudFocus">—</span></div>
+  <div class="row"><span class="k">태양까지 거리</span><span class="v" id="hudDist">—</span></div>
+  <div class="row"><span class="k">공전 주기</span><span class="v" id="hudPeriod">—</span></div>
+  <div class="sep"></div>
   <div class="row"><span class="k">지구 자전각</span><span class="v" id="hudRot">—</span></div>
   <div class="row"><span class="k">달 위상</span><span class="v" id="hudPhase">—</span></div>
   <div class="row"><span class="k">지구–달 거리</span><span class="v" id="hudEM">—</span></div>
-  <div class="row"><span class="k">지구–태양 거리</span><span class="v" id="hudES">—</span></div>
 </div>
 
 <div id="controls">
@@ -86,10 +86,10 @@
   <button id="btnRealtime" title="1배속">🔴 실시간</button>
   <button id="btnNow" title="현재 시각으로">⏱ 지금으로</button>
   <div class="div"></div>
-  <button id="btnFocusEarth" title="지구 중심 보기">🌍 지구</button>
-  <button id="btnFocusSun" title="태양계 전체 보기">☀ 태양계</button>
+  <label for="focusSel">초점</label>
+  <select id="focusSel" title="카메라 추적 대상"></select>
   <div class="div"></div>
-  <button id="btnScale" title="스케일 전환">📐 시각화 모드</button>
+  <button id="btnScale" title="거리 스케일 전환">📐 거리: 시각화</button>
   <button id="btnOrbit" title="궤도선 표시">🛰 궤도 켬</button>
   <button id="btnView" title="시점 리셋 (R)">🎯 뷰 리셋</button>
 </div>
@@ -99,10 +99,9 @@
 <div id="loading">
   <div class="spinner"></div>
   <p>태양계를 불러오는 중…</p>
-  <p class="sub">이 화면이 계속 보이면 인터넷 연결을 확인하세요. (Three.js를 CDN에서 받아옵니다)</p>
+  <p class="sub">이 화면이 계속 보이면 인터넷 연결을 확인하세요. (Three.js·텍스처를 CDN에서 받아옵니다)</p>
 </div>
 
-<!-- Three.js — CDN ES Module (인터넷 필요) -->
 <script type="importmap">
 {
   "imports": {
@@ -117,134 +116,147 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 /* ============================================================
-   태양계 프로젝트 · Step 1
-   - 태양(중심) / 지구(실시간 자전·공전) / 달(실시간 공전)
-   - 천체 위치는 실제 현재 시각 기반 (Schlyter 궤도력 + 달 섭동항)
-   ★ 지구-달 상대위치·공전주기를 실제 시간과 정밀히 맞물리게 계산
-     → 추후 조석(물때표) 계산 확장의 토대
+   태양계 프로젝트 · Step 2
+   - 태양 + 8행성(수성~해왕성) + 달
+   - 실제 현재 시각 기반 천체력 (Keplerian Elements, Schlyter 궤도력)
+   - 행성별 공전주기·거리순서 고증 / 토성 고리 / 궤도 가이드선
+   - 지구: NASA 실측 텍스처(낮·지형·구름·야간불빛)로 고품질화
    ============================================================ */
-
 try {
 
 // ---------- 상수 ----------
 const DEG = Math.PI / 180, RAD = 180 / Math.PI;
-const AU_KM = 149597870.7;        // 1 천문단위(km)
-const EARTH_RADIUS_KM = 6371.0;   // 지구 평균반지름(km)
-const SUN_RADIUS_KM = 696340.0;
-const MOON_RADIUS_KM = 1737.4;
-const OBLIQUITY = 23.4393;        // 황도경사각(지구 자전축 기울기, deg)
+const AU_KM = 149597870.7;
+const EARTH_RADIUS_KM = 6371.0, SUN_RADIUS_KM = 696340.0, MOON_RADIUS_KM = 1737.4;
 const ORIGIN = new THREE.Vector3(0, 0, 0);
 
-// 스케일 프리셋 — [시각화 최적화] vs [실제 비율]
-const SCALES = {
-  visual: {  // 보기 좋게 보정: 행성을 키우고 달 궤도를 넓힘
-    auToUnits: 100,        // 1 AU → 100 단위 (지구 공전반지름 ≈ 100)
-    sunRadius: 9,
-    earthRadius: 2.4,
-    moonRadius: 0.95,
-    moonDistFactor: 0.30   // 달 지심거리(지구반지름 단위) → 화면 단위
-  },
-  real: {    // 실제 비율 그대로 (지구는 점처럼 보임 — 의도된 비교용)
-    auToUnits: 100,
-    sunRadius: SUN_RADIUS_KM / AU_KM * 100,
-    earthRadius: EARTH_RADIUS_KM / AU_KM * 100,
-    moonRadius: MOON_RADIUS_KM / AU_KM * 100,
-    moonDistFactor: EARTH_RADIUS_KM / AU_KM * 100
-  }
+// 화면 스케일 — 크기는 항상 '시각화' 값, 거리만 모드에 따라 토글
+const AU_UNITS = 70;        // 1 AU 기준 화면단위
+const DIST_POW = 0.6;       // 시각화 모드의 거리 압축 지수(거리 순서 유지, 외행성 압축)
+const MOON_DIST_FACTOR = 0.32;  // 달 지심거리(지구반지름) → 화면단위 (가시성 위해 항상 과장)
+const SUN_RADIUS = 12;
+
+// 텍스처 CDN (NASA 기반 — three.js 저장소 미러)
+const TEXBASE = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/textures/planets/';
+const TEX = {
+  earthDay: TEXBASE + 'earth_atmos_2048.jpg',
+  earthNormal: TEXBASE + 'earth_normal_2048.jpg',
+  earthClouds: TEXBASE + 'earth_clouds_1024.png',
+  earthLights: TEXBASE + 'earth_lights_2048.png',
+  moon: TEXBASE + 'moon_1024.jpg'
 };
 
-// ---------- 천문 계산 헬퍼 ----------
-const rev = x => { x %= 360; return x < 0 ? x + 360 : x; };
-const sind = x => Math.sin(x * DEG);
-const cosd = x => Math.cos(x * DEG);
-const atan2d = (y, x) => Math.atan2(y, x) * RAD;
-const acosd = x => Math.acos(Math.min(1, Math.max(-1, x))) * RAD;
+// ---------- 행성 데이터 (Keplerian 궤도요소 · 2000.0 기준, [기준값, 1일당 변화율]) ----------
+const PLANETS = [
+  { key:'mercury', name:'수성', style:'rocky', color:0x9a8c7d, vRadius:0.95, rotH:1407.6, tilt:0.03,
+    el:{ N:[48.3313,3.24587e-5], i:[7.0047,5.00e-8], w:[29.1241,1.01444e-5],
+         a:[0.387098,0], e:[0.205635,5.59e-10], M:[168.6562,4.0923344368] } },
+  { key:'venus', name:'금성', style:'rocky', color:0xe3d2a8, vRadius:2.15, rotH:-5832.5, tilt:177.4,
+    el:{ N:[76.6799,2.46590e-5], i:[3.3946,2.75e-8], w:[54.8910,1.38374e-5],
+         a:[0.723330,0], e:[0.006773,-1.302e-9], M:[48.0052,1.6021302244] } },
+  { key:'earth', name:'지구', style:'earth', color:0x2a4a8a, vRadius:2.3, rotH:23.9345, tilt:23.44,
+    el:{ N:[0,0], i:[0,0], w:[102.9404,4.70935e-5],
+         a:[1.000000,0], e:[0.016709,-1.151e-9], M:[356.0470,0.9856002585] } },
+  { key:'mars', name:'화성', style:'rocky', color:0xc15a33, vRadius:1.35, rotH:24.6229, tilt:25.19,
+    el:{ N:[49.5574,2.11081e-5], i:[1.8497,-1.78e-8], w:[286.5016,2.92961e-5],
+         a:[1.523688,0], e:[0.093405,2.516e-9], M:[18.6021,0.5240207766] } },
+  { key:'jupiter', name:'목성', style:'gas', vRadius:7.6, rotH:9.925, tilt:3.13, redSpot:true,
+    palette:['#c9a87c','#e3cda6','#a8794f','#d8bf99','#8a5f3c','#ead9c0'],
+    el:{ N:[100.4542,2.76854e-5], i:[1.3030,-1.557e-7], w:[273.8777,1.64505e-5],
+         a:[5.20256,0], e:[0.048498,4.469e-9], M:[19.8950,0.0830853001] } },
+  { key:'saturn', name:'토성', style:'gas', vRadius:6.4, rotH:10.656, tilt:26.73, ring:true,
+    palette:['#e8dab0','#f2e8cc','#d2bd8e','#ece0bd','#dccba0'],
+    el:{ N:[113.6634,2.38980e-5], i:[2.4886,-1.081e-7], w:[339.3939,2.97661e-5],
+         a:[9.55475,0], e:[0.055546,-9.499e-9], M:[316.9670,0.0334442282] } },
+  { key:'uranus', name:'천왕성', style:'gas', vRadius:4.1, rotH:-17.24, tilt:97.77,
+    palette:['#aee0e6','#c8eef2','#93d2da','#bae8ec'],
+    el:{ N:[74.0005,1.3978e-5], i:[0.7733,1.90e-8], w:[96.6612,3.0565e-5],
+         a:[19.18171,-1.55e-8], e:[0.047318,7.45e-9], M:[142.5905,0.011725806] } },
+  { key:'neptune', name:'해왕성', style:'gas', vRadius:4.0, rotH:16.11, tilt:28.32,
+    palette:['#3a5fcc','#5278e6','#2c49a8','#6b90f0'],
+    el:{ N:[131.7806,3.0173e-5], i:[1.7700,-2.55e-7], w:[272.8461,-6.027e-6],
+         a:[30.05826,3.313e-8], e:[0.008606,2.15e-9], M:[260.2471,0.005995147] } }
+];
+const EARTH = PLANETS.find(p => p.key === 'earth');
+// 공전주기 사전 계산 (M의 1일당 변화율로부터 → 실제값과 일치)
+for (const P of PLANETS) {
+  P.periodDays = 360 / P.el.M[1];
+  P.periodYears = P.periodDays / 365.25;
+}
 
-// 기준 시각(2000 Jan 0.0 UT = 1999-12-31 00:00 UT)으로부터의 경과일수 d
+// ---------- 천문 계산 ----------
+const rev = x => { x %= 360; return x < 0 ? x + 360 : x; };
+const sind = x => Math.sin(x * DEG), cosd = x => Math.cos(x * DEG);
+const atan2d = (y, x) => Math.atan2(y, x) * RAD;
 const EPOCH = Date.UTC(1999, 11, 31, 0, 0, 0);
 const dayNumber = date => (date.getTime() - EPOCH) / 86400000;
 
-// 태양(= 지구 공전) — 지심 황도좌표
-function sunPosition(d) {
-  const w = 282.9404 + 4.70935e-5 * d;        // 근일점 황경
-  const e = 0.016709 - 1.151e-9 * d;          // 이심률
-  const M = rev(356.0470 + 0.9856002585 * d); // 평균근점이각
-  const E = M + RAD * e * sind(M) * (1 + e * cosd(M)); // 이심근점이각(태양은 1회 근사로 충분)
-  const xv = cosd(E) - e;
-  const yv = Math.sqrt(1 - e * e) * sind(E);
-  const v = atan2d(yv, xv);                   // 진근점이각
-  const r = Math.sqrt(xv * xv + yv * yv);     // 거리(AU)
-  return { lon: rev(v + w), r, M, w: rev(w), L: rev(M + w) };
-}
-
-// 달 — 지심 황도좌표 (단위: 지구반지름). 섭동항으로 정밀도 ↑
-function moonPosition(d, sun) {
-  const N = rev(125.1228 - 0.0529538083 * d); // 승교점 황경
-  const i = 5.1454;                           // 궤도 경사
-  const w = rev(318.0634 + 0.1643573223 * d); // 근지점 인수
-  const a = 60.2666;                          // 평균거리(지구반지름)
-  const e = 0.054900;                         // 이심률
-  const M = rev(115.3654 + 13.0649929509 * d);// 평균근점이각
-
-  // 케플러 방정식 반복 풀이 (달은 이심률이 커서 반복 필요)
+// 케플러 궤도요소 → 일심(태양중심) 황도 직교좌표 (AU)
+function planetHelio(d, P) {
+  const el = P.el;
+  const N = el.N[0] + el.N[1] * d, i = el.i[0] + el.i[1] * d, w = el.w[0] + el.w[1] * d;
+  const a = el.a[0] + el.a[1] * d, e = el.e[0] + el.e[1] * d;
+  const M = rev(el.M[0] + el.M[1] * d);
+  // 케플러 방정식 풀이
   let E = M + RAD * e * sind(M) * (1 + e * cosd(M));
   for (let k = 0; k < 8; k++) {
     const dE = (E - RAD * e * sind(E) - M) / (1 - e * cosd(E));
-    E -= dE;
-    if (Math.abs(dE) < 1e-7) break;
+    E -= dE; if (Math.abs(dE) < 1e-7) break;
   }
-  const xv = a * (cosd(E) - e);
-  const yv = a * Math.sqrt(1 - e * e) * sind(E);
-  const v = atan2d(yv, xv);
-  const r = Math.sqrt(xv * xv + yv * yv);
-
-  // 궤도면 → 황도 3D 좌표
+  const xv = a * (cosd(E) - e), yv = a * Math.sqrt(1 - e * e) * sind(E);
+  const v = atan2d(yv, xv), r = Math.sqrt(xv * xv + yv * yv);
   const xh = r * (cosd(N) * cosd(v + w) - sind(N) * sind(v + w) * cosd(i));
   const yh = r * (sind(N) * cosd(v + w) + cosd(N) * sind(v + w) * cosd(i));
   const zh = r * (sind(v + w) * sind(i));
-  let lon = atan2d(yh, xh);
-  let lat = atan2d(zh, Math.sqrt(xh * xh + yh * yh));
+  return { xh, yh, zh, r, M, w, lon: rev(atan2d(yh, xh)) };
+}
 
-  // 섭동(perturbations) — 태양 중력 등에 의한 보정 (정밀도 ~2′)
-  const Ls = sun.L, Ms = sun.M;
-  const Lm = rev(N + w + M), Mm = M;
-  const Dm = rev(Lm - Ls);   // 달의 이각(elongation)
-  const F = rev(Lm - N);     // 위도 인수
-  lon += -1.274 * sind(Mm - 2 * Dm)      // 출차(evection)
-       + 0.658 * sind(2 * Dm)            // 이균차(variation)
-       - 0.186 * sind(Ms)                // 연차(yearly equation)
-       - 0.059 * sind(2 * Mm - 2 * Dm)
-       - 0.057 * sind(Mm - 2 * Dm + Ms)
-       + 0.053 * sind(Mm + 2 * Dm)
-       + 0.046 * sind(2 * Dm - Ms)
-       + 0.041 * sind(Mm - Ms)
-       - 0.035 * sind(Dm)                // 시차 부등
-       - 0.031 * sind(Mm + Ms)
-       - 0.015 * sind(2 * F - 2 * Dm)
-       + 0.011 * sind(Mm - 4 * Dm);
-  lat += -0.173 * sind(F - 2 * Dm)
-       - 0.055 * sind(Mm - F - 2 * Dm)
-       - 0.046 * sind(Mm + F - 2 * Dm)
-       + 0.033 * sind(F + 2 * Dm)
-       + 0.017 * sind(2 * Mm + F);
+// 태양의 평균황경·평균근점이각 (달 섭동 + 지구 자전 계산용)
+function sunLM(d) {
+  const eh = planetHelio(d, EARTH);
+  return { M: eh.M, L: rev(eh.M + eh.w + 180) };
+}
+
+// 달 — 지심 황도좌표(지구반지름 단위) + 섭동항 12개 (Schlyter)
+function moonPosition(d, sun) {
+  const N = rev(125.1228 - 0.0529538083 * d), i = 5.1454;
+  const w = rev(318.0634 + 0.1643573223 * d), a = 60.2666, e = 0.054900;
+  const M = rev(115.3654 + 13.0649929509 * d);
+  let E = M + RAD * e * sind(M) * (1 + e * cosd(M));
+  for (let k = 0; k < 8; k++) {
+    const dE = (E - RAD * e * sind(E) - M) / (1 - e * cosd(E));
+    E -= dE; if (Math.abs(dE) < 1e-7) break;
+  }
+  const xv = a * (cosd(E) - e), yv = a * Math.sqrt(1 - e * e) * sind(E);
+  const v = atan2d(yv, xv), r = Math.sqrt(xv * xv + yv * yv);
+  const xh = r * (cosd(N) * cosd(v + w) - sind(N) * sind(v + w) * cosd(i));
+  const yh = r * (sind(N) * cosd(v + w) + cosd(N) * sind(v + w) * cosd(i));
+  const zh = r * (sind(v + w) * sind(i));
+  let lon = atan2d(yh, xh), lat = atan2d(zh, Math.sqrt(xh * xh + yh * yh));
+  const Ls = sun.L, Ms = sun.M, Lm = rev(N + w + M), Mm = M;
+  const Dm = rev(Lm - Ls), F = rev(Lm - N);
+  lon += -1.274 * sind(Mm - 2 * Dm) + 0.658 * sind(2 * Dm) - 0.186 * sind(Ms)
+       - 0.059 * sind(2 * Mm - 2 * Dm) - 0.057 * sind(Mm - 2 * Dm + Ms)
+       + 0.053 * sind(Mm + 2 * Dm) + 0.046 * sind(2 * Dm - Ms)
+       + 0.041 * sind(Mm - Ms) - 0.035 * sind(Dm) - 0.031 * sind(Mm + Ms)
+       - 0.015 * sind(2 * F - 2 * Dm) + 0.011 * sind(Mm - 4 * Dm);
+  lat += -0.173 * sind(F - 2 * Dm) - 0.055 * sind(Mm - F - 2 * Dm)
+       - 0.046 * sind(Mm + F - 2 * Dm) + 0.033 * sind(F + 2 * Dm) + 0.017 * sind(2 * Mm + F);
   const rm = r - 0.58 * cosd(Mm - 2 * Dm) - 0.46 * cosd(2 * Dm);
-
   return {
-    x: rm * cosd(lon) * cosd(lat),
-    y: rm * sind(lon) * cosd(lat),
-    z: rm * sind(lat),
-    lon: rev(lon), lat, r: rm
+    x: rm * cosd(lon) * cosd(lat), y: rm * sind(lon) * cosd(lat), z: rm * sind(lat),
+    lon: rev(lon), r: rm
   };
 }
 
-// 지구 자전각 — 그리니치 평균 항성시(GMST) 기반 → 1 항성일에 1회전
-function earthRotation(date, sun) {
+function earthRotation(date, Ls) {
   const ut = date.getUTCHours() + date.getUTCMinutes() / 60
            + date.getUTCSeconds() / 3600 + date.getUTCMilliseconds() / 3.6e6;
-  return rev(sun.L + 180 + ut * 15);
+  return rev(Ls + 180 + ut * 15);   // 그리니치 평균 항성시
 }
-
-// 달 위상 이름
+function planetSpin(d, P) {
+  return rev(d / (P.rotH / 24) * 360);   // 실제 자전주기 기반 (rotH 음수 = 역행)
+}
 function moonPhaseName(a) {
   const t = [[22.5, '삭(신월)'], [67.5, '초승달'], [112.5, '상현달'],
             [157.5, '차오르는 달'], [202.5, '보름달(망)'], [247.5, '기우는 달'],
@@ -252,24 +264,38 @@ function moonPhaseName(a) {
   for (const [lim, nm] of t) if (a < lim) return nm;
   return '삭(신월)';
 }
+function periodStr(P) {
+  return P.periodYears < 1 ? P.periodDays.toFixed(1) + ' 일' : P.periodYears.toFixed(2) + ' 년';
+}
 
-// 특정 시각의 전체 상태 계산
+// 특정 시각의 전체 상태
 function computeState(date) {
   const d = dayNumber(date);
-  const sun = sunPosition(d);
-  const moon = moonPosition(d, sun);
-  // 지구 일심좌표(태양 기준) = 태양 지심좌표의 반대 / 황도좌표 → Three.js (x,z,-y)
-  const earthPos = new THREE.Vector3(-sun.r * cosd(sun.lon), 0, sun.r * sind(sun.lon));
-  const moonPos = new THREE.Vector3(moon.x, moon.z, -moon.y);
-  const phaseAngle = rev(moon.lon - sun.lon);
+  const bodies = {};
+  for (const P of PLANETS) {
+    const h = planetHelio(d, P);
+    bodies[P.key] = { helio: new THREE.Vector3(h.xh, h.zh, -h.yh), r: h.r, lon: h.lon };
+  }
+  const sun = sunLM(d);
+  const m = moonPosition(d, sun);
+  const sunGeoLon = rev(bodies.earth.lon + 180);
+  const phaseAngle = rev(m.lon - sunGeoLon);
   return {
-    date, earthPos, moonPos,
-    rotDeg: earthRotation(date, sun),
-    illum: (1 - cosd(phaseAngle)) / 2,
-    phaseName: moonPhaseName(phaseAngle),
-    earthMoonKm: moon.r * EARTH_RADIUS_KM,
-    earthSunKm: sun.r * AU_KM
+    date, d, bodies,
+    moonGeo: new THREE.Vector3(m.x, m.z, -m.y),
+    moonDistKm: m.r * EARTH_RADIUS_KM,
+    rotDeg: earthRotation(date, sun.L),
+    phaseAngle, illum: (1 - cosd(phaseAngle)) / 2, phaseName: moonPhaseName(phaseAngle)
   };
+}
+
+// 일심좌표(AU) → 화면좌표 (거리모드 반영)
+let distMode = 'visual';
+function sceneScale(vAU) {
+  const L = vAU.length();
+  if (L < 1e-9) return vAU.clone();
+  const mag = distMode === 'visual' ? AU_UNITS * Math.pow(L, DIST_POW) : AU_UNITS * L;
+  return vAU.clone().multiplyScalar(mag / L);
 }
 
 // ---------- 렌더러 / 씬 / 카메라 ----------
@@ -277,11 +303,11 @@ const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuff
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 document.body.appendChild(renderer.domElement);
+const MAXANISO = renderer.capabilities.getMaxAnisotropy();
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x01010a);
-
-const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.01, 60000);
+const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.01, 80000);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -289,279 +315,392 @@ controls.dampingFactor = 0.07;
 controls.enablePan = false;
 controls.rotateSpeed = 0.8;
 controls.zoomSpeed = 0.9;
-controls.minDistance = 0.05;
-controls.maxDistance = 45000;
+controls.minDistance = 0.4;
+controls.maxDistance = 60000;
 
-// ---------- 조명 ----------
-const sunLight = new THREE.PointLight(0xfff2da, 2.6, 0, 0); // decay 0 = 거리감쇠 없음
-scene.add(sunLight);                                        // 원점(태양)에 위치
-scene.add(new THREE.AmbientLight(0x2a3358, 0.16));          // 밤면이 완전 암흑이 되지 않게
+const sunLight = new THREE.PointLight(0xfff2da, 2.6, 0, 0);  // 거리감쇠 없음
+scene.add(sunLight);
+scene.add(new THREE.AmbientLight(0x2a3358, 0.13));
 
-// ---------- 절차적 텍스처 (외부 이미지 의존 없음) ----------
-function makeEarthTexture() {
-  const w = 1024, h = 512, c = document.createElement('canvas');
-  c.width = w; c.height = h; const x = c.getContext('2d');
-  const g = x.createLinearGradient(0, 0, 0, h);
-  g.addColorStop(0, '#0a2a55'); g.addColorStop(.5, '#13458a'); g.addColorStop(1, '#0a2a55');
-  x.fillStyle = g; x.fillRect(0, 0, w, h);
-  const greens = ['#2f6b34', '#3c7d3f', '#4f8a45', '#6b7d3a', '#7a6a3c'];
-  for (let k = 0; k < 13; k++) {                 // 대륙 — 무작위 덩어리
-    const cx = Math.random() * w, cy = h * .18 + Math.random() * h * .64;
-    const blobs = 10 + (Math.random() * 16 | 0);
-    for (let b = 0; b < blobs; b++) {
-      const a = Math.random() * 6.283, dist = Math.random() * 70;
-      x.fillStyle = greens[Math.random() * greens.length | 0];
-      x.beginPath();
-      x.ellipse(cx + Math.cos(a) * dist, cy + Math.sin(a) * dist * .7,
-        14 + Math.random() * 34, (14 + Math.random() * 34) * (.6 + Math.random() * .6),
-        Math.random() * 3.14, 0, 6.283);
-      x.fill();
-    }
-  }
-  x.fillStyle = 'rgba(238,244,255,.92)';         // 극관
-  x.beginPath(); x.ellipse(w / 2, 0, w, 40, 0, 0, 6.283); x.fill();
-  x.beginPath(); x.ellipse(w / 2, h, w, 40, 0, 0, 6.283); x.fill();
-  x.fillStyle = 'rgba(255,255,255,.13)';         // 옅은 구름
-  for (let k = 0; k < 40; k++) {
-    x.beginPath();
-    x.ellipse(Math.random() * w, Math.random() * h,
-      20 + Math.random() * 60, 8 + Math.random() * 22, 0, 0, 6.283);
-    x.fill();
-  }
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+const texLoader = new THREE.TextureLoader();
+function loadColorTex(url, ok) {
+  texLoader.load(url, t => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = MAXANISO; ok(t); },
+    undefined, () => console.warn('텍스처 로드 실패:', url));
+}
+function loadDataTex(url, ok) {
+  texLoader.load(url, t => { t.anisotropy = MAXANISO; ok(t); },
+    undefined, () => console.warn('텍스처 로드 실패:', url));
 }
 
-function makeMoonTexture() {
-  const w = 1024, h = 512, c = document.createElement('canvas');
-  c.width = w; c.height = h; const x = c.getContext('2d');
-  x.fillStyle = '#9a978f'; x.fillRect(0, 0, w, h);
-  for (let k = 0; k < 7; k++) {                  // 달의 바다(어두운 패치)
-    const cx = Math.random() * w, cy = Math.random() * h, r = 40 + Math.random() * 90;
-    const g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
-    g.addColorStop(0, 'rgba(75,73,70,.85)'); g.addColorStop(1, 'rgba(75,73,70,0)');
-    x.fillStyle = g; x.beginPath(); x.arc(cx, cy, r, 0, 6.283); x.fill();
-  }
-  for (let k = 0; k < 90; k++) {                 // 크레이터
-    const cx = Math.random() * w, cy = Math.random() * h, r = 2 + Math.random() * 15;
-    x.fillStyle = 'rgba(120,117,110,.7)'; x.beginPath(); x.arc(cx, cy, r, 0, 6.283); x.fill();
-    x.strokeStyle = 'rgba(225,222,214,.5)'; x.lineWidth = 1;
-    x.beginPath(); x.arc(cx, cy, r, 0, 6.283); x.stroke();
-  }
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
-}
+// ---------- 절차적 텍스처 ----------
+function canvasTex(c) { const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = MAXANISO; return t; }
 
 function makeSunTexture() {
   const w = 1024, h = 512, c = document.createElement('canvas');
   c.width = w; c.height = h; const x = c.getContext('2d');
   x.fillStyle = '#ff7714'; x.fillRect(0, 0, w, h);
-  for (let k = 0; k < 340; k++) {                // 플라스마 얼룩
+  for (let k = 0; k < 340; k++) {
     const cx = Math.random() * w, cy = Math.random() * h, r = 8 + Math.random() * 46;
     const col = Math.random() > .5 ? '255,214,90' : '226,70,8';
     const g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
     g.addColorStop(0, `rgba(${col},.55)`); g.addColorStop(1, `rgba(${col},0)`);
     x.fillStyle = g; x.beginPath(); x.arc(cx, cy, r, 0, 6.283); x.fill();
   }
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  return canvasTex(c);
 }
-
 function makeGlowTexture() {
   const s = 256, c = document.createElement('canvas');
   c.width = c.height = s; const x = c.getContext('2d');
   const g = x.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
-  g.addColorStop(0, 'rgba(255,230,150,.9)');
-  g.addColorStop(.25, 'rgba(255,170,60,.45)');
-  g.addColorStop(.6, 'rgba(255,120,30,.12)');
-  g.addColorStop(1, 'rgba(255,120,30,0)');
+  g.addColorStop(0, 'rgba(255,230,150,.9)'); g.addColorStop(.25, 'rgba(255,170,60,.45)');
+  g.addColorStop(.6, 'rgba(255,120,30,.12)'); g.addColorStop(1, 'rgba(255,120,30,0)');
   x.fillStyle = g; x.fillRect(0, 0, s, s);
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  return canvasTex(c);
+}
+// 가스행성 — 가로 줄무늬
+function makeBandedTexture(P) {
+  const w = 512, h = 256, c = document.createElement('canvas');
+  c.width = w; c.height = h; const x = c.getContext('2d');
+  const pal = P.palette;
+  for (let y = 0; y < h;) {
+    const bh = 5 + Math.random() * 22;
+    x.fillStyle = pal[Math.random() * pal.length | 0];
+    x.fillRect(0, y, w, bh + 1); y += bh;
+  }
+  for (let k = 0; k < 60; k++) {                 // 난류 얼룩
+    x.globalAlpha = 0.12; x.fillStyle = pal[Math.random() * pal.length | 0];
+    x.beginPath();
+    x.ellipse(Math.random() * w, Math.random() * h, 18 + Math.random() * 40, 5 + Math.random() * 12, 0, 0, 6.283);
+    x.fill();
+  }
+  x.globalAlpha = 1;
+  if (P.redSpot) {                               // 목성 대적점
+    x.fillStyle = '#b5471f';
+    x.beginPath(); x.ellipse(w * 0.62, h * 0.63, 32, 16, 0, 0, 6.283); x.fill();
+    x.fillStyle = '#d98a5f';
+    x.beginPath(); x.ellipse(w * 0.62, h * 0.63, 18, 9, 0, 0, 6.283); x.fill();
+  }
+  return canvasTex(c);
+}
+// 암석행성 — 베이스색 + 얼룩 + 크레이터
+function makeRockyTexture(P) {
+  const w = 512, h = 256, c = document.createElement('canvas');
+  c.width = w; c.height = h; const x = c.getContext('2d');
+  const base = new THREE.Color(P.color);
+  x.fillStyle = '#' + base.getHexString(); x.fillRect(0, 0, w, h);
+  for (let k = 0; k < 150; k++) {
+    const cc = base.clone();
+    cc.offsetHSL(0, (Math.random() - .5) * .1, (Math.random() - .5) * .4);
+    x.fillStyle = `rgba(${cc.r * 255 | 0},${cc.g * 255 | 0},${cc.b * 255 | 0},${.3 + Math.random() * .4})`;
+    x.beginPath();
+    x.ellipse(Math.random() * w, Math.random() * h, 4 + Math.random() * 26, 4 + Math.random() * 22, 0, 0, 6.283);
+    x.fill();
+  }
+  for (let k = 0; k < 70; k++) {                 // 크레이터
+    x.strokeStyle = 'rgba(0,0,0,.22)'; x.lineWidth = 1;
+    x.beginPath(); x.arc(Math.random() * w, Math.random() * h, 2 + Math.random() * 9, 0, 6.283); x.stroke();
+  }
+  return canvasTex(c);
+}
+function makeEarthFallbackTexture() {       // 실측 텍스처 로드 전/실패 시 대체
+  const w = 1024, h = 512, c = document.createElement('canvas');
+  c.width = w; c.height = h; const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, '#0a2a55'); g.addColorStop(.5, '#13458a'); g.addColorStop(1, '#0a2a55');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  const greens = ['#2f6b34', '#3c7d3f', '#4f8a45', '#6b7d3a'];
+  for (let k = 0; k < 13; k++) {
+    const cx = Math.random() * w, cy = h * .2 + Math.random() * h * .6;
+    for (let b = 0; b < 16; b++) {
+      const a = Math.random() * 6.283, dist = Math.random() * 70;
+      x.fillStyle = greens[Math.random() * greens.length | 0];
+      x.beginPath();
+      x.ellipse(cx + Math.cos(a) * dist, cy + Math.sin(a) * dist * .7, 16 + Math.random() * 30, 14 + Math.random() * 26, 0, 0, 6.283);
+      x.fill();
+    }
+  }
+  return canvasTex(c);
+}
+function makeRingTexture() {                 // 토성 고리
+  const w = 256, h = 8, c = document.createElement('canvas');
+  c.width = w; c.height = h; const x = c.getContext('2d');
+  for (let i = 0; i < w; i++) {
+    const t = i / w;
+    let a = 0.55 + 0.4 * Math.sin(t * 40);
+    a *= 0.7 + 0.3 * Math.random();
+    if (t > 0.62 && t < 0.68) a *= 0.12;       // 카시니 간극
+    if (t < 0.06 || t > 0.97) a *= 0.2;        // 가장자리 페이드
+    a = Math.max(0, Math.min(1, a));
+    const s = 180 + Math.random() * 55;
+    x.fillStyle = `rgba(${s | 0},${s * .92 | 0},${s * .72 | 0},${a})`;
+    x.fillRect(i, 0, 1, h);
+  }
+  return canvasTex(c);
 }
 
-// ---------- 별 배경(우주 공간) ----------
-function makeStars() {
-  const N = 9000, R = 12000;
+// ---------- 별 배경 ----------
+(function () {
+  const N = 9000, R = 14000;
   const pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
   for (let i = 0; i < N; i++) {
-    const u = Math.random() * 2 - 1, th = Math.random() * 6.283;
-    const rr = Math.sqrt(1 - u * u);
-    pos[i * 3] = R * rr * Math.cos(th);
-    pos[i * 3 + 1] = R * u;
-    pos[i * 3 + 2] = R * rr * Math.sin(th);
+    const u = Math.random() * 2 - 1, th = Math.random() * 6.283, rr = Math.sqrt(1 - u * u);
+    pos[i * 3] = R * rr * Math.cos(th); pos[i * 3 + 1] = R * u; pos[i * 3 + 2] = R * rr * Math.sin(th);
     const b = 0.6 + Math.random() * 0.4, tint = Math.random();
     let r = b, g = b, bl = b;
-    if (tint < 0.15) { g = b * 0.85; bl = b * 0.7; }       // 노란 별
-    else if (tint < 0.3) { r = b * 0.7; g = b * 0.82; }    // 푸른 별
+    if (tint < 0.15) { g = b * .85; bl = b * .7; } else if (tint < 0.3) { r = b * .7; g = b * .82; }
     col[i * 3] = r; col[i * 3 + 1] = g; col[i * 3 + 2] = bl;
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  return new THREE.Points(geo, new THREE.PointsMaterial({
+  scene.add(new THREE.Points(geo, new THREE.PointsMaterial({
     size: 1.6, sizeAttenuation: false, vertexColors: true, transparent: true
-  }));
-}
-scene.add(makeStars());
+  })));
+})();
 
-// ---------- 천체 (반지름 1 구체 + scale 로 크기 조절) ----------
-// 태양
+// ---------- 태양 ----------
 const sunMesh = new THREE.Mesh(
-  new THREE.SphereGeometry(1, 48, 32),
-  new THREE.MeshBasicMaterial({ map: makeSunTexture() })   // 항상 밝게(빛 영향 X)
+  new THREE.SphereGeometry(SUN_RADIUS, 48, 32),
+  new THREE.MeshBasicMaterial({ map: makeSunTexture() })
 );
 scene.add(sunMesh);
 const glow = new THREE.Sprite(new THREE.SpriteMaterial({
-  map: makeGlowTexture(), blending: THREE.AdditiveBlending,
-  transparent: true, depthWrite: false
+  map: makeGlowTexture(), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false
 }));
+glow.scale.setScalar(SUN_RADIUS * 4.2);
 scene.add(glow);
 
-// 지구 시스템: earthSystem(이동만) > earthTilt(자전축 23.4° 고정) > earthMesh(자전)
-const earthSystem = new THREE.Group();
-scene.add(earthSystem);
-const earthTilt = new THREE.Group();
-earthTilt.rotation.z = OBLIQUITY * DEG;        // 자전축 기울기 — 우주공간에 고정 → 계절 발생
-earthSystem.add(earthTilt);
-const earthMesh = new THREE.Mesh(
-  new THREE.SphereGeometry(1, 64, 48),
-  new THREE.MeshStandardMaterial({ map: makeEarthTexture(), roughness: 1, metalness: 0 })
-);
-earthTilt.add(earthMesh);
-const atmo = new THREE.Mesh(                    // 옅은 대기 띠
-  new THREE.SphereGeometry(1, 48, 32),
-  new THREE.MeshBasicMaterial({
-    color: 0x5b9bff, transparent: true, opacity: 0.16,
-    side: THREE.BackSide, blending: THREE.AdditiveBlending, depthWrite: false
-  })
-);
-earthTilt.add(atmo);
-const axisLine = new THREE.Line(                // 자전축 표시선
-  new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(0, -1.9, 0), new THREE.Vector3(0, 1.9, 0)]),
-  new THREE.LineBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.55 })
-);
-earthTilt.add(axisLine);
+// ---------- 행성 생성 ----------
+const planetGeo = new THREE.SphereGeometry(1, 48, 32);
+const earthGeo = new THREE.SphereGeometry(1, 64, 48);
+const bodyObjs = {};
 
-// 달 (지구 시스템의 자식 — 지구 자전축/자전의 영향을 받지 않음)
-const moonMesh = new THREE.Mesh(
-  new THREE.SphereGeometry(1, 48, 32),
-  new THREE.MeshStandardMaterial({ map: makeMoonTexture(), roughness: 1, metalness: 0 })
-);
-earthSystem.add(moonMesh);
+function buildPlanet(P) {
+  const group = new THREE.Group();             // 공전 위치
+  scene.add(group);
+  const tilt = new THREE.Group();              // 자전축 기울기 (우주공간 고정)
+  tilt.rotation.z = P.tilt * DEG;
+  group.add(tilt);
+
+  let mat, geo = planetGeo;
+  if (P.style === 'earth') {
+    geo = earthGeo;
+    mat = new THREE.MeshStandardMaterial({ map: makeEarthFallbackTexture(), roughness: 0.9, metalness: 0.04 });
+    // NASA 실측 텍스처 비동기 적용 (낮 표면 / 지형 노멀 / 야간 도시불빛)
+    loadColorTex(TEX.earthDay, t => { mat.map = t; mat.needsUpdate = true; });
+    loadDataTex(TEX.earthNormal, t => { mat.normalMap = t; mat.normalScale.set(0.85, 0.85); mat.needsUpdate = true; });
+    loadColorTex(TEX.earthLights, t => {
+      mat.emissiveMap = t; mat.emissive = new THREE.Color(0xffd9a0);
+      mat.emissiveIntensity = 1.15; mat.needsUpdate = true;
+    });
+  } else if (P.style === 'gas') {
+    mat = new THREE.MeshStandardMaterial({ map: makeBandedTexture(P), roughness: 1, metalness: 0 });
+  } else {
+    mat = new THREE.MeshStandardMaterial({ map: makeRockyTexture(P), roughness: 1, metalness: 0 });
+  }
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.scale.setScalar(P.vRadius);
+  tilt.add(mesh);
+
+  const obj = { P, group, tilt, mesh };
+
+  if (P.style === 'earth') {                   // 구름층 · 대기 · 자전축
+    const cloudMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff, transparent: true, opacity: 0.92, depthWrite: false, roughness: 1
+    });
+    loadColorTex(TEX.earthClouds, t => { cloudMat.map = t; cloudMat.alphaMap = t; cloudMat.needsUpdate = true; });
+    const clouds = new THREE.Mesh(earthGeo, cloudMat);
+    clouds.scale.setScalar(P.vRadius * 1.012);
+    tilt.add(clouds);
+    obj.clouds = clouds;
+
+    const atmo = new THREE.Mesh(earthGeo, new THREE.MeshBasicMaterial({
+      color: 0x5b9bff, transparent: true, opacity: 0.16,
+      side: THREE.BackSide, blending: THREE.AdditiveBlending, depthWrite: false
+    }));
+    atmo.scale.setScalar(P.vRadius * 1.16);
+    tilt.add(atmo);
+
+    const axis = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0, -1.9, 0), new THREE.Vector3(0, 1.9, 0)]),
+      new THREE.LineBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.55 }));
+    axis.scale.setScalar(P.vRadius);
+    tilt.add(axis);
+  }
+
+  if (P.ring) {                                // 토성 고리
+    const inner = 1.4, outer = 2.35;
+    const rg = new THREE.RingGeometry(inner, outer, 96, 1);
+    const rp = rg.attributes.position, ru = rg.attributes.uv, tmp = new THREE.Vector3();
+    for (let k = 0; k < rp.count; k++) {       // UV를 반지름 방향으로 재매핑
+      tmp.fromBufferAttribute(rp, k);
+      ru.setXY(k, (tmp.length() - inner) / (outer - inner), 1);
+    }
+    const ring = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({
+      map: makeRingTexture(), side: THREE.DoubleSide, transparent: true, depthWrite: false
+    }));
+    ring.rotation.x = Math.PI / 2;
+    ring.scale.setScalar(P.vRadius);
+    tilt.add(ring);
+  }
+
+  bodyObjs[P.key] = obj;
+  return obj;
+}
+for (const P of PLANETS) buildPlanet(P);
+
+// ---------- 달 ----------
+const moonMat = new THREE.MeshStandardMaterial({ roughness: 1, metalness: 0, color: 0x999999 });
+loadColorTex(TEX.moon, t => { moonMat.map = t; moonMat.color.set(0xffffff); moonMat.needsUpdate = true; });
+const moonMesh = new THREE.Mesh(planetGeo, moonMat);
+moonMesh.scale.setScalar(0.62);
+bodyObjs.earth.group.add(moonMesh);
 
 // ---------- 궤도선 ----------
-function orbitLine(points, color) {
-  return new THREE.LineLoop(
-    new THREE.BufferGeometry().setFromPoints(points),
-    new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.5 })
-  );
-}
-// 지구 공전궤도(태양 기준, AU 단위 원시좌표) — 그룹 scale 로 화면단위 변환
-function buildEarthOrbit(d0) {
-  const pts = [];
-  for (let i = 0; i <= 360; i++) {
-    const s = sunPosition(d0 + i / 360 * 365.2564);  // 1 항성년
-    pts.push(new THREE.Vector3(-s.r * cosd(s.lon), 0, s.r * sind(s.lon)));
+const orbitMat = new THREE.LineBasicMaterial({ color: 0x6a7388, transparent: true, opacity: 0.5 });
+const orbitObjs = [];
+const orbitEpoch = dayNumber(new Date());
+function sampleOrbit(P) {
+  const steps = Math.max(96, Math.min(360, Math.round(P.periodDays / 4)));
+  const raw = [];
+  for (let k = 0; k < steps; k++) {
+    const h = planetHelio(orbitEpoch + k / steps * P.periodDays, P);
+    raw.push(new THREE.Vector3(h.xh, h.zh, -h.yh));
   }
-  return pts;
+  return raw;
 }
-// 달 공전궤도(지구 기준, 지구반지름 단위 원시좌표)
-function buildMoonOrbit(d0) {
-  const pts = [];
-  for (let i = 0; i <= 360; i++) {
-    const dd = d0 + i / 360 * 27.32166;              // 1 항성월
-    const m = moonPosition(dd, sunPosition(dd));
-    pts.push(new THREE.Vector3(m.x, m.z, -m.y));
-  }
-  return pts;
+for (const P of PLANETS) {
+  const raw = sampleOrbit(P);
+  const geo = new THREE.BufferGeometry().setFromPoints(raw.map(sceneScale));
+  const line = new THREE.LineLoop(geo, orbitMat);
+  scene.add(line);
+  orbitObjs.push({ raw, line });
 }
-const d0 = dayNumber(new Date());
-const earthOrbitGroup = new THREE.Group();
-earthOrbitGroup.add(orbitLine(buildEarthOrbit(d0), 0x4477aa));
-scene.add(earthOrbitGroup);
+// 달 궤도 (지구 기준)
 const moonOrbitGroup = new THREE.Group();
-moonOrbitGroup.add(orbitLine(buildMoonOrbit(d0), 0x8a8a9c));
-earthSystem.add(moonOrbitGroup);
+moonOrbitGroup.scale.setScalar(MOON_DIST_FACTOR);
+bodyObjs.earth.group.add(moonOrbitGroup);
+(function () {
+  const raw = [];
+  for (let k = 0; k < 180; k++) {
+    const dd = orbitEpoch + k / 180 * 27.32166;
+    const m = moonPosition(dd, sunLM(dd));
+    raw.push(new THREE.Vector3(m.x, m.z, -m.y));
+  }
+  moonOrbitGroup.add(new THREE.LineLoop(
+    new THREE.BufferGeometry().setFromPoints(raw),
+    new THREE.LineBasicMaterial({ color: 0x8a8a9c, transparent: true, opacity: 0.5 })));
+})();
+function rebuildOrbits() {
+  for (const o of orbitObjs) {
+    const arr = o.line.geometry.attributes.position.array;
+    for (let k = 0; k < o.raw.length; k++) {
+      const p = sceneScale(o.raw[k]);
+      arr[k * 3] = p.x; arr[k * 3 + 1] = p.y; arr[k * 3 + 2] = p.z;
+    }
+    o.line.geometry.attributes.position.needsUpdate = true;
+    o.line.geometry.computeBoundingSphere();
+  }
+}
 
 // ---------- 상태 / 모드 ----------
-let scaleMode = 'visual';
-let orbitsVisible = true;
-let paused = false;
-let focusName = 'earth';
-let simTime = Date.now();                        // 모의 시각(ms) — 1배속이면 실제시간과 동일
-const SPEEDS = [-604800, -86400, -21600, -3600, -600, -60, -10, -1,
-                1, 10, 60, 600, 3600, 21600, 86400, 604800];
+let paused = false, orbitsVisible = true, focusKey = 'earth';
+let simTime = Date.now();
+const SPEEDS = [-31557600, -2629800, -604800, -86400, -3600, -60, -1,
+                1, 60, 3600, 86400, 604800, 2629800, 31557600];
 let speedIndex = SPEEDS.indexOf(1);
 const prevFocus = new THREE.Vector3();
 
-// 스케일 적용
-function applyScale() {
-  const S = SCALES[scaleMode];
-  sunMesh.scale.setScalar(S.sunRadius);
-  glow.scale.setScalar(S.sunRadius * 4.2);
-  earthMesh.scale.setScalar(S.earthRadius);
-  atmo.scale.setScalar(S.earthRadius * 1.18);
-  axisLine.scale.setScalar(S.earthRadius);
-  moonMesh.scale.setScalar(S.moonRadius);
-  earthOrbitGroup.scale.setScalar(S.auToUnits);
-  moonOrbitGroup.scale.setScalar(S.moonDistFactor);
-}
-
-// 매 프레임 씬 갱신
 function updateScene(st) {
-  const S = SCALES[scaleMode];
-  earthSystem.position.copy(st.earthPos).multiplyScalar(S.auToUnits);
-  moonMesh.position.copy(st.moonPos).multiplyScalar(S.moonDistFactor);
-  earthMesh.rotation.y = st.rotDeg * DEG;                 // 실시간 자전
-  moonMesh.lookAt(earthSystem.position);                 // 조석 고정(달은 늘 같은 면이 지구를 향함)
+  for (const P of PLANETS) {
+    const o = bodyObjs[P.key];
+    o.group.position.copy(sceneScale(st.bodies[P.key].helio));
+    o.mesh.rotation.y = (P.key === 'earth' ? st.rotDeg : planetSpin(st.d, P)) * DEG;
+  }
+  const eo = bodyObjs.earth;
+  if (eo.clouds) eo.clouds.rotation.y = (st.rotDeg + st.d * 3) * DEG;  // 구름 약간 드리프트
+  moonMesh.position.copy(st.moonGeo).multiplyScalar(MOON_DIST_FACTOR);
+  moonMesh.lookAt(eo.group.position);                                  // 조석 고정
 }
 
-// 카메라 시점 구성
+// 초점 천체의 화면 좌표
+const _v = new THREE.Vector3();
+function focusWorldPos(out) {
+  if (focusKey === 'moon') return moonMesh.getWorldPosition(out);
+  if (focusKey === 'sun' || focusKey === 'system') return out.set(0, 0, 0);
+  return out.copy(bodyObjs[focusKey].group.position);
+}
+function focusRadius() {
+  if (focusKey === 'sun') return SUN_RADIUS;
+  if (focusKey === 'moon') return 0.62;
+  if (focusKey === 'system') return 0;
+  return bodyObjs[focusKey].P.vRadius;
+}
 function frameView() {
-  const S = SCALES[scaleMode];
-  if (focusName === 'sun') {
-    const r = S.auToUnits;
-    controls.target.set(0, 0, 0);
-    camera.position.set(r * 0.45, r * 0.85, r * 1.9);
-    prevFocus.set(0, 0, 0);
+  focusWorldPos(prevFocus);
+  controls.target.copy(prevFocus);
+  if (focusKey === 'system') {
+    const far = (bodyObjs.neptune.group.position.length() || 500) * 1.35;
+    camera.position.set(far * 0.05, far * 0.62, far * 1.05);
   } else {
-    const p = earthSystem.position;
-    const r = Math.max(S.moonDistFactor * 64, S.earthRadius * 9, 12);
-    controls.target.copy(p);
-    camera.position.set(p.x + r * 0.35, p.y + r * 0.55, p.z + r * 1.5);
-    prevFocus.copy(p);
+    let r = focusRadius() * 7 + 4;
+    if (focusKey === 'earth') r = Math.max(r, MOON_DIST_FACTOR * 60 * 1.7);
+    if (focusKey === 'saturn') r *= 1.5;
+    camera.position.set(prevFocus.x + r * 0.35, prevFocus.y + r * 0.5, prevFocus.z + r * 1.35);
   }
 }
 
 // ---------- HUD ----------
 const $ = id => document.getElementById(id);
 function speedLabel(v) {
-  const a = Math.abs(v);
-  let s;
+  const a = Math.abs(v); let s;
   if (a === 1) s = '실시간 (1×)';
   else if (a < 60) s = a + '×';
   else if (a < 3600) s = (a / 60) + '분/초';
   else if (a < 86400) s = (a / 3600) + '시간/초';
   else if (a < 604800) s = (a / 86400) + '일/초';
-  else s = (a / 604800) + '주/초';
+  else if (a < 2629800) s = (a / 604800) + '주/초';
+  else if (a < 31557600) s = Math.round(a / 2629800) + '개월/초';
+  else s = (a / 31557600) + '년/초';
   return (v < 0 ? '◀역행 ' : '') + s;
 }
 let lastHud = 0;
 function updateHUD(st, now) {
   if (now - lastHud < 120) return;
   lastHud = now;
-  $('hudLocal').textContent = st.date.toLocaleString('ko-KR',
-    { dateStyle: 'medium', timeStyle: 'medium' });
+  $('hudLocal').textContent = st.date.toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'medium' });
   $('hudUTC').textContent = st.date.toISOString().replace('T', ' ').slice(0, 19);
   $('hudSpeed').textContent = paused ? '⏸ 일시정지' : speedLabel(SPEEDS[speedIndex]);
+  let fname, dist, per;
+  if (focusKey === 'system') { fname = '태양계 전체 (행성 8)'; dist = '—'; per = '—'; }
+  else if (focusKey === 'sun') { fname = '태양 (중심별)'; dist = '0 AU'; per = '—'; }
+  else if (focusKey === 'moon') { fname = '달 (지구의 위성)'; dist = st.bodies.earth.r.toFixed(3) + ' AU'; per = '27.32 일'; }
+  else { const P = bodyObjs[focusKey].P; fname = P.name; dist = st.bodies[focusKey].r.toFixed(3) + ' AU'; per = periodStr(P); }
+  $('hudFocus').textContent = fname;
+  $('hudDist').textContent = dist;
+  $('hudPeriod').textContent = per;
   $('hudRot').textContent = st.rotDeg.toFixed(1) + '°';
   $('hudPhase').textContent = st.phaseName + ' · ' + Math.round(st.illum * 100) + '%';
-  $('hudEM').textContent = Math.round(st.earthMoonKm).toLocaleString('ko-KR') + ' km';
-  $('hudES').textContent = Math.round(st.earthSunKm).toLocaleString('ko-KR') + ' km';
+  $('hudEM').textContent = Math.round(st.moonDistKm).toLocaleString('ko-KR') + ' km';
 }
 
-// ---------- UI 동작 ----------
-function changeSpeed(dir) {
-  speedIndex = Math.min(SPEEDS.length - 1, Math.max(0, speedIndex + dir));
+// ---------- UI ----------
+const FOCUS_LIST = [
+  ['system', '🌌 태양계 전체'], ['sun', '☀ 태양'], ['mercury', '수성'], ['venus', '금성'],
+  ['earth', '🌍 지구'], ['moon', '🌙 달'], ['mars', '화성'], ['jupiter', '목성'],
+  ['saturn', '토성'], ['uranus', '천왕성'], ['neptune', '해왕성']
+];
+const focusSel = $('focusSel');
+for (const [key, label] of FOCUS_LIST) {
+  const op = document.createElement('option');
+  op.value = key; op.textContent = label;
+  if (key === 'earth') op.selected = true;
+  focusSel.appendChild(op);
 }
+focusSel.onchange = () => { focusKey = focusSel.value; frameView(); };
+
+function changeSpeed(d) { speedIndex = Math.min(SPEEDS.length - 1, Math.max(0, speedIndex + d)); }
 function togglePause() {
   paused = !paused;
   $('btnPause').textContent = paused ? '▶ 재생' : '⏸ 정지';
@@ -571,29 +710,18 @@ $('btnSlower').onclick = () => changeSpeed(-1);
 $('btnFaster').onclick = () => changeSpeed(1);
 $('btnPause').onclick = togglePause;
 $('btnRealtime').onclick = () => { speedIndex = SPEEDS.indexOf(1); };
-$('btnNow').onclick = () => {
-  simTime = Date.now();
-  speedIndex = SPEEDS.indexOf(1);
-  if (paused) togglePause();
-};
-$('btnFocusEarth').onclick = () => {
-  focusName = 'earth'; frameView();
-  $('btnFocusEarth').classList.add('on');
-  $('btnFocusSun').classList.remove('on');
-};
-$('btnFocusSun').onclick = () => {
-  focusName = 'sun'; frameView();
-  $('btnFocusSun').classList.add('on');
-  $('btnFocusEarth').classList.remove('on');
-};
+$('btnNow').onclick = () => { simTime = Date.now(); speedIndex = SPEEDS.indexOf(1); if (paused) togglePause(); };
 $('btnScale').onclick = () => {
-  scaleMode = scaleMode === 'visual' ? 'real' : 'visual';
-  applyScale(); frameView();
-  $('btnScale').textContent = scaleMode === 'visual' ? '📐 시각화 모드' : '📐 실제 비율';
+  distMode = distMode === 'visual' ? 'real' : 'visual';
+  $('btnScale').textContent = distMode === 'visual' ? '📐 거리: 시각화' : '📐 거리: 실제비율';
+  rebuildOrbits();
+  updateScene(computeState(new Date(simTime)));
+  frameView();
 };
 $('btnOrbit').onclick = () => {
   orbitsVisible = !orbitsVisible;
-  earthOrbitGroup.visible = moonOrbitGroup.visible = orbitsVisible;
+  for (const o of orbitObjs) o.line.visible = orbitsVisible;
+  moonOrbitGroup.visible = orbitsVisible;
   $('btnOrbit').textContent = orbitsVisible ? '🛰 궤도 켬' : '🛰 궤도 끔';
   $('btnOrbit').classList.toggle('on', orbitsVisible);
 };
@@ -610,33 +738,27 @@ addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
 });
 
-// ---------- 초기화 & 애니메이션 ----------
-applyScale();
+// ---------- 초기화 & 루프 ----------
 updateScene(computeState(new Date(simTime)));
-focusName = 'earth';
-frameView();
-$('btnFocusEarth').classList.add('on');
 $('btnOrbit').classList.add('on');
+frameView();
 
 let prevT = performance.now();
 function animate() {
   requestAnimationFrame(animate);
   const now = performance.now();
-  let dt = (now - prevT) / 1000;
-  prevT = now;
-  if (dt > 0.1) dt = 0.1;                          // 탭 비활성 후 점프 방지
-
+  let dt = (now - prevT) / 1000; prevT = now;
+  if (dt > 0.1) dt = 0.1;
   if (!paused) simTime += dt * 1000 * SPEEDS[speedIndex];
 
   const st = computeState(new Date(simTime));
   updateScene(st);
 
-  // 카메라가 초점 천체를 따라가도록 (고배속에서도 시야 유지)
-  const fp = focusName === 'sun' ? ORIGIN : earthSystem.position;
-  const move = fp.clone().sub(prevFocus);
-  camera.position.add(move);
-  controls.target.add(move);
-  prevFocus.copy(fp);
+  focusWorldPos(_v);                       // 초점 천체 추적 (고배속에서도 시야 유지)
+  const mv = _v.clone().sub(prevFocus);
+  camera.position.add(mv);
+  controls.target.add(mv);
+  prevFocus.copy(_v);
 
   controls.update();
   renderer.render(scene, camera);
@@ -647,13 +769,12 @@ $('loading').remove();
 animate();
 
 } catch (err) {
-  // 초기화 실패 시(주로 CDN 로드 실패) 사용자에게 안내
   const el = document.getElementById('loading');
   if (el) {
     el.classList.add('error');
     el.innerHTML = '<p>⚠ 실행에 실패했습니다.</p>'
       + '<p class="sub">' + (err && err.message ? err.message : err) + '</p>'
-      + '<p class="sub">인터넷 연결을 확인하거나, 로컬 서버로 열어보세요.</p>';
+      + '<p class="sub">인터넷 연결을 확인하거나, 폴더에서 로컬 서버로 열어보세요.</p>';
   }
   console.error(err);
 }
