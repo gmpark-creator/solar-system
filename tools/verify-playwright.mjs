@@ -32,7 +32,7 @@ async function inspectViewport(browser, viewport) {
   await page.waitForFunction(() => window.__SOLAR_READY === true, null, { timeout: 45000 });
   await page.waitForTimeout(600);
 
-  const screenshotPath = path.join('internal', 'notes', 'verification', `step1-${viewport.name}.png`);
+  const screenshotPath = path.join('internal', 'notes', 'verification', `step2-${viewport.name}.png`);
   await page.screenshot({ path: screenshotPath, fullPage: false });
 
   const metrics = await page.evaluate(() => {
@@ -64,13 +64,27 @@ async function inspectViewport(browser, viewport) {
       litRatio: litPixels / (data.length / 4),
       colorBucketCount: colorBuckets.size,
       loadingHidden: loading?.classList.contains('is-hidden') ?? false,
+      planetCount: Object.keys(window.solarProject.computeState(new Date()).planets).length,
+      focusOptionCount: document.querySelectorAll('#focus-target option').length,
       hud: hud ? { width: hud.width, height: hud.height, top: hud.top, left: hud.left } : null,
       toolbar: toolbar ? { width: toolbar.width, height: toolbar.height, bottom: innerHeight - toolbar.bottom, left: toolbar.left } : null,
     };
   });
 
+  await page.selectOption('#focus-target', 'saturn');
+  await page.waitForTimeout(180);
+  await page.click('#scale-mode');
+  await page.waitForTimeout(180);
+  await page.selectOption('#focus-target', 'neptune');
+  await page.waitForTimeout(180);
+  const interaction = await page.evaluate(() => ({
+    focusValue: document.getElementById('focus-target').value,
+    scaleText: document.getElementById('scale-mode').textContent,
+    ready: window.__SOLAR_READY === true,
+  }));
+
   await page.close();
-  return { viewport: viewport.name, screenshotPath, messages, metrics };
+  return { viewport: viewport.name, screenshotPath, messages, metrics, interaction };
 }
 
 function assertResult(result) {
@@ -79,6 +93,15 @@ function assertResult(result) {
   }
   if (!result.metrics.loadingHidden) {
     throw new Error(`${result.viewport} loading overlay did not hide`);
+  }
+  if (result.metrics.planetCount !== 7) {
+    throw new Error(`${result.viewport} expected 7 major planets beyond Earth, got ${result.metrics.planetCount}`);
+  }
+  if (result.metrics.focusOptionCount !== 10) {
+    throw new Error(`${result.viewport} expected 10 focus options, got ${result.metrics.focusOptionCount}`);
+  }
+  if (result.interaction.focusValue !== 'neptune' || result.interaction.scaleText !== 'True' || !result.interaction.ready) {
+    throw new Error(`${result.viewport} focus/scale interaction failed: ${JSON.stringify(result.interaction)}`);
   }
   if (result.metrics.litRatio < 0.005) {
     throw new Error(`${result.viewport} canvas appears blank: ${JSON.stringify(result.metrics)}`);

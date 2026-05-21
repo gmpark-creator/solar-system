@@ -9,11 +9,13 @@
 
 ## Current Status
 
-- Step 1 implemented in the Codex lane.
+- Step 2 implemented in the Codex lane.
 - Stack: HTML5 + JavaScript + Three.js CDN, with local Node static server for development.
 - Entry point: `index.html`
 - App code: `src/app.js`, `src/styles.css`
 - Verification: `npm run verify` passed for desktop and mobile viewports.
+- Implemented bodies: Sun, Mercury, Venus, Earth, Moon, Mars, Jupiter, Saturn, Uranus, Neptune.
+- Current focus UI supports Sun, Moon, and all major planets.
 
 ## Peer Review Setup
 
@@ -33,5 +35,5 @@ Current detected peer candidate:
 
 ## Next Needed Input
 
-- Step 2 범위 결정: 나머지 행성 위치/궤도 추가, 행성 텍스처 개선, 또는 달/조석 계산 정밀도 강화
+- Step 3 범위 결정: 고정밀 달/조석 계산 기반 모듈, 행성 텍스처/조명 고도화, 또는 날짜 탐색 UI
 - Claude lane과의 구현 비교 후 반영할 항목 선택

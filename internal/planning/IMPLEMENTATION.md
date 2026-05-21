@@ -2,9 +2,10 @@
 
 ## Pending
 
-- Decide Step 2 scope.
-- Add Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune positions and orbit lines.
 - Decide whether to keep simplified Schlyter-style ephemeris or move high-precision Earth-Moon data to a dedicated module.
+- Decide Step 3 scope.
+- Add date/time scrubber or direct time input.
+- Add source/accuracy panel for astronomical formulas before tide-related use.
 
 ## Done
 
@@ -14,3 +15,6 @@
 - Implement Step 1 Sun/Earth/Moon Three.js simulator.
 - Add local Node static server.
 - Add Playwright desktop/mobile canvas-pixel verification.
+- Add Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune positions and orbit lines.
+- Add planet focus dropdown and Saturn ring visualization.
+- Expand Playwright verification to assert planet count and focus/scale interactions.

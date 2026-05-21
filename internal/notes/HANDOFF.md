@@ -45,3 +45,20 @@ npm run verify
 ```
 
 Latest verification passed on desktop `1440x900` and mobile `390x844`; screenshots were written under `internal/notes/verification/` and are gitignored as local evidence artifacts.
+
+## Step 2 Codex Implementation
+
+Implemented:
+
+- Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune simplified Keplerian ephemeris.
+- Planet meshes, procedural planet textures, orbit lines, labels, and focus dropdown.
+- Saturn ring mesh.
+- Verification assertions for 7 added planets and focus/scale interaction.
+
+Verification command:
+
+```powershell
+npm run verify
+```
+
+Latest verification passed on desktop `1440x900` and mobile `390x844`; screenshots were written as `step2-desktop.png` and `step2-mobile.png` under `internal/notes/verification/`.

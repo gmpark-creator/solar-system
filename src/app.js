@@ -36,6 +36,154 @@ const SCALES = {
 
 const SPEEDS = [-604800, -86400, -21600, -3600, -600, -60, -10, -1, 1, 10, 60, 600, 3600, 21600, 86400, 604800];
 
+const PLANET_DEFS = [
+  {
+    id: 'mercury',
+    label: 'Mercury',
+    radiusKm: 2439.7,
+    visualRadius: 0.5,
+    orbitColor: 0x8f877c,
+    baseColor: '#9d8e7d',
+    accentColor: '#4f4740',
+    seed: 5101,
+    rotationHours: 1407.5,
+    periodDays: 87.969,
+    elements: (d) => ({
+      node: 48.3313 + 3.24587e-5 * d,
+      inclination: 7.0047 + 5.00e-8 * d,
+      periapsis: 29.1241 + 1.01444e-5 * d,
+      semiMajorAxis: 0.387098,
+      eccentricity: 0.205635 + 5.59e-10 * d,
+      meanAnomaly: 168.6562 + 4.0923344368 * d,
+    }),
+  },
+  {
+    id: 'venus',
+    label: 'Venus',
+    radiusKm: 6051.8,
+    visualRadius: 1.12,
+    orbitColor: 0xc99b5a,
+    baseColor: '#d7a960',
+    accentColor: '#fff0bb',
+    seed: 5102,
+    rotationHours: -5832.5,
+    periodDays: 224.701,
+    elements: (d) => ({
+      node: 76.6799 + 2.46590e-5 * d,
+      inclination: 3.3946 + 2.75e-8 * d,
+      periapsis: 54.8910 + 1.38374e-5 * d,
+      semiMajorAxis: 0.723330,
+      eccentricity: 0.006773 - 1.302e-9 * d,
+      meanAnomaly: 48.0052 + 1.6021302244 * d,
+    }),
+  },
+  {
+    id: 'mars',
+    label: 'Mars',
+    radiusKm: 3389.5,
+    visualRadius: 0.72,
+    orbitColor: 0xc26642,
+    baseColor: '#b45131',
+    accentColor: '#e6c09c',
+    seed: 5104,
+    rotationHours: 24.623,
+    periodDays: 686.98,
+    elements: (d) => ({
+      node: 49.5574 + 2.11081e-5 * d,
+      inclination: 1.8497 - 1.78e-8 * d,
+      periapsis: 286.5016 + 2.92961e-5 * d,
+      semiMajorAxis: 1.523688,
+      eccentricity: 0.093405 + 2.516e-9 * d,
+      meanAnomaly: 18.6021 + 0.5240207766 * d,
+    }),
+  },
+  {
+    id: 'jupiter',
+    label: 'Jupiter',
+    radiusKm: 69911,
+    visualRadius: 4.2,
+    orbitColor: 0xd3a071,
+    baseColor: '#d4ad84',
+    accentColor: '#7d4b31',
+    seed: 5105,
+    rotationHours: 9.925,
+    periodDays: 4332.59,
+    banded: true,
+    elements: (d) => ({
+      node: 100.4542 + 2.76854e-5 * d,
+      inclination: 1.3030 - 1.557e-7 * d,
+      periapsis: 273.8777 + 1.64505e-5 * d,
+      semiMajorAxis: 5.20256,
+      eccentricity: 0.048498 + 4.469e-9 * d,
+      meanAnomaly: 19.8950 + 0.0830853001 * d,
+    }),
+  },
+  {
+    id: 'saturn',
+    label: 'Saturn',
+    radiusKm: 58232,
+    visualRadius: 3.65,
+    orbitColor: 0xd8bd82,
+    baseColor: '#dfbf82',
+    accentColor: '#9d764f',
+    seed: 5106,
+    rotationHours: 10.656,
+    periodDays: 10759.22,
+    banded: true,
+    ring: true,
+    elements: (d) => ({
+      node: 113.6634 + 2.38980e-5 * d,
+      inclination: 2.4886 - 1.081e-7 * d,
+      periapsis: 339.3939 + 2.97661e-5 * d,
+      semiMajorAxis: 9.55475,
+      eccentricity: 0.055546 - 9.499e-9 * d,
+      meanAnomaly: 316.9670 + 0.0334442282 * d,
+    }),
+  },
+  {
+    id: 'uranus',
+    label: 'Uranus',
+    radiusKm: 25362,
+    visualRadius: 2.35,
+    orbitColor: 0x78dce4,
+    baseColor: '#78d6dc',
+    accentColor: '#d6ffff',
+    seed: 5107,
+    rotationHours: -17.24,
+    periodDays: 30688.5,
+    elements: (d) => ({
+      node: 74.0005 + 1.3978e-5 * d,
+      inclination: 0.7733 + 1.9e-8 * d,
+      periapsis: 96.6612 + 3.0565e-5 * d,
+      semiMajorAxis: 19.18171 - 1.55e-8 * d,
+      eccentricity: 0.047318 + 7.45e-9 * d,
+      meanAnomaly: 142.5905 + 0.011725806 * d,
+    }),
+  },
+  {
+    id: 'neptune',
+    label: 'Neptune',
+    radiusKm: 24622,
+    visualRadius: 2.28,
+    orbitColor: 0x5d78e8,
+    baseColor: '#3f67cc',
+    accentColor: '#9ab6ff',
+    seed: 5108,
+    rotationHours: 16.11,
+    periodDays: 60182,
+    elements: (d) => ({
+      node: 131.7806 + 3.0173e-5 * d,
+      inclination: 1.7700 - 2.55e-7 * d,
+      periapsis: 272.8461 - 6.027e-6 * d,
+      semiMajorAxis: 30.05826 + 3.313e-8 * d,
+      eccentricity: 0.008606 + 2.15e-9 * d,
+      meanAnomaly: 260.2471 + 0.005995147 * d,
+    }),
+  },
+];
+
+const PLANET_BY_ID = Object.fromEntries(PLANET_DEFS.map((planet) => [planet.id, planet]));
+
 const readouts = {
   local: document.getElementById('readout-local'),
   utc: document.getElementById('readout-utc'),
@@ -53,6 +201,7 @@ const buttons = {
   now: document.getElementById('now'),
   focusEarth: document.getElementById('focus-earth'),
   focusSun: document.getElementById('focus-sun'),
+  focusTarget: document.getElementById('focus-target'),
   scaleMode: document.getElementById('scale-mode'),
   toggleOrbits: document.getElementById('toggle-orbits'),
 };
@@ -120,6 +269,35 @@ function solarElements(days) {
     radiusAu,
     meanAnomaly,
     meanLongitude: rev(meanAnomaly + perihelion),
+  };
+}
+
+function planetElements(days, planet) {
+  const elements = planet.elements(days);
+  const node = rev(elements.node);
+  const inclination = elements.inclination;
+  const periapsis = rev(elements.periapsis);
+  const eccentricity = elements.eccentricity;
+  const meanAnomaly = rev(elements.meanAnomaly);
+  const eccentricAnomaly = solveKepler(meanAnomaly, eccentricity);
+
+  const xv = elements.semiMajorAxis * (cosDeg(eccentricAnomaly) - eccentricity);
+  const yv = elements.semiMajorAxis * Math.sqrt(1 - eccentricity * eccentricity) * sinDeg(eccentricAnomaly);
+  const trueAnomaly = atan2Deg(yv, xv);
+  const radiusAu = Math.sqrt(xv * xv + yv * yv);
+
+  const xh = radiusAu * (cosDeg(node) * cosDeg(trueAnomaly + periapsis)
+    - sinDeg(node) * sinDeg(trueAnomaly + periapsis) * cosDeg(inclination));
+  const yh = radiusAu * (sinDeg(node) * cosDeg(trueAnomaly + periapsis)
+    + cosDeg(node) * sinDeg(trueAnomaly + periapsis) * cosDeg(inclination));
+  const zh = radiusAu * (sinDeg(trueAnomaly + periapsis) * sinDeg(inclination));
+
+  return {
+    id: planet.id,
+    radiusAu,
+    longitude: rev(atan2Deg(yh, xh)),
+    latitude: atan2Deg(zh, Math.sqrt(xh * xh + yh * yh)),
+    vectorAu: toSceneVector(xh, yh, zh),
   };
 }
 
@@ -197,6 +375,7 @@ function computeState(date) {
   const days = daysSinceEpoch(date);
   const sun = solarElements(days);
   const moon = lunarElements(days, sun);
+  const planets = Object.fromEntries(PLANET_DEFS.map((planet) => [planet.id, planetElements(days, planet)]));
   const sunVectorAu = toSceneVector(
     sun.radiusAu * cosDeg(sun.longitude),
     sun.radiusAu * sinDeg(sun.longitude),
@@ -208,8 +387,10 @@ function computeState(date) {
 
   return {
     date,
+    days,
     sun,
     moon,
+    planets,
     earthVectorAu,
     gmst: gmstDegrees(date),
     phaseAngle,
@@ -352,6 +533,49 @@ function makeMoonTexture() {
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.stroke();
+    }
+  });
+}
+
+function makePlanetTexture(planet) {
+  const rand = seededRandom(planet.seed);
+  return canvasTexture(1024, 512, (ctx, width, height) => {
+    const base = ctx.createLinearGradient(0, 0, width, height);
+    base.addColorStop(0, planet.accentColor);
+    base.addColorStop(0.42, planet.baseColor);
+    base.addColorStop(1, planet.accentColor);
+    ctx.fillStyle = base;
+    ctx.fillRect(0, 0, width, height);
+
+    if (planet.banded) {
+      for (let y = 0; y < height; y += 18 + rand() * 18) {
+        const alpha = 0.12 + rand() * 0.28;
+        ctx.fillStyle = rand() > 0.45 ? `rgba(255,245,220,${alpha})` : `rgba(80,48,32,${alpha})`;
+        ctx.fillRect(0, y, width, 8 + rand() * 22);
+      }
+    } else {
+      for (let i = 0; i < 80; i += 1) {
+        const x = rand() * width;
+        const y = rand() * height;
+        const radius = 8 + rand() * 48;
+        const detail = ctx.createRadialGradient(x, y, 0, x, y, radius);
+        detail.addColorStop(0, `rgba(255,255,255,${0.06 + rand() * 0.12})`);
+        detail.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = detail;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    if (planet.id === 'mars') {
+      ctx.fillStyle = 'rgba(245,238,210,0.88)';
+      ctx.beginPath();
+      ctx.ellipse(width * 0.5, 0, width * 0.4, 36, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(width * 0.5, height, width * 0.34, 34, 0, 0, Math.PI * 2);
+      ctx.fill();
     }
   });
 }
@@ -541,16 +765,57 @@ const moonMesh = new THREE.Mesh(
 );
 scene.add(moonMesh);
 
+const planetGeometry = new THREE.SphereGeometry(1, 64, 48);
+const planetMeshes = Object.fromEntries(PLANET_DEFS.map((planet) => {
+  const mesh = new THREE.Mesh(
+    planetGeometry,
+    new THREE.MeshStandardMaterial({
+      map: makePlanetTexture(planet),
+      roughness: 0.96,
+      metalness: 0,
+      emissive: new THREE.Color(planet.orbitColor).multiplyScalar(0.08),
+      emissiveIntensity: 0.18,
+    }),
+  );
+  mesh.userData.planet = planet;
+  scene.add(mesh);
+  return [planet.id, mesh];
+}));
+
+const saturnRing = new THREE.Mesh(
+  new THREE.RingGeometry(1.38, 2.18, 128),
+  new THREE.MeshBasicMaterial({
+    color: 0xd8c391,
+    transparent: true,
+    opacity: 0.52,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  }),
+);
+saturnRing.rotation.set(64 * DEG, 0, 18 * DEG);
+scene.add(saturnRing);
+
 const earthOrbit = makeOrbitLine(0x4e92d8, 0.42);
 const moonOrbit = makeOrbitLine(0xd8d8e6, 0.38);
 scene.add(earthOrbit);
 scene.add(moonOrbit);
+
+const planetOrbits = Object.fromEntries(PLANET_DEFS.map((planet) => {
+  const line = makeOrbitLine(planet.orbitColor, planet.id === 'neptune' || planet.id === 'uranus' ? 0.24 : 0.34);
+  scene.add(line);
+  return [planet.id, line];
+}));
 
 const labels = {
   sun: makeLabel('Sun'),
   earth: makeLabel('Earth'),
   moon: makeLabel('Moon'),
 };
+const planetLabels = Object.fromEntries(PLANET_DEFS.map((planet) => {
+  const label = makeLabel(planet.label);
+  scene.add(label);
+  return [planet.id, label];
+}));
 scene.add(labels.sun, labels.earth, labels.moon);
 
 const markerGeometry = new THREE.RingGeometry(0.9, 1, 64);
@@ -566,7 +831,13 @@ const moonMarker = new THREE.Mesh(markerGeometry, new THREE.MeshBasicMaterial({
   opacity: 0.34,
   side: THREE.DoubleSide,
 }));
-scene.add(earthMarker, moonMarker);
+const focusMarker = new THREE.Mesh(markerGeometry, new THREE.MeshBasicMaterial({
+  color: 0xffca67,
+  transparent: true,
+  opacity: 0.54,
+  side: THREE.DoubleSide,
+}));
+scene.add(earthMarker, moonMarker, focusMarker);
 
 let scaleMode = 'visual';
 let focusMode = 'earth';
@@ -577,7 +848,8 @@ let simulationMs = Date.now();
 let previousAnimationMs = performance.now();
 let previousFocus = new THREE.Vector3();
 let lastHudUpdate = 0;
-let lastOrbitDayBucket = Number.NaN;
+let lastMoonOrbitBucket = Number.NaN;
+let lastSolarOrbitBucket = Number.NaN;
 let firstFrameRendered = false;
 
 function currentScale() {
@@ -590,6 +862,32 @@ function earthPositionUnits(state, scale) {
 
 function moonOffsetUnits(state, scale) {
   return state.moon.vectorEarthRadii.clone().multiplyScalar(scale.moonDistancePerEarthRadius);
+}
+
+function planetPositionUnits(state, scale, planetId) {
+  return state.planets[planetId].vectorAu.clone().multiplyScalar(scale.au);
+}
+
+function planetRadiusUnits(scale, planet) {
+  if (scaleMode === 'real') return (planet.radiusKm / AU_KM) * scale.au;
+  return planet.visualRadius;
+}
+
+function bodyPositionUnits(bodyId, state, scale) {
+  if (bodyId === 'sun') return new THREE.Vector3(0, 0, 0);
+  const earthPosition = earthPositionUnits(state, scale);
+  if (bodyId === 'earth') return earthPosition;
+  if (bodyId === 'moon') return earthPosition.add(moonOffsetUnits(state, scale));
+  if (state.planets[bodyId]) return planetPositionUnits(state, scale, bodyId);
+  return earthPosition;
+}
+
+function bodyRadiusUnits(bodyId, scale) {
+  if (bodyId === 'sun') return scale.sunRadius;
+  if (bodyId === 'earth') return scale.earthRadius;
+  if (bodyId === 'moon') return scale.moonRadius;
+  if (PLANET_BY_ID[bodyId]) return planetRadiusUnits(scale, PLANET_BY_ID[bodyId]);
+  return scale.earthRadius;
 }
 
 function buildEarthOrbitPoints(centerDate) {
@@ -618,12 +916,32 @@ function buildMoonOrbitPoints(centerDate) {
   return points;
 }
 
+function buildPlanetOrbitPoints(planet, centerDate) {
+  const startDay = daysSinceEpoch(centerDate) - planet.periodDays / 2;
+  const points = [];
+  const scale = currentScale();
+  for (let i = 0; i < 640; i += 1) {
+    const day = startDay + (planet.periodDays * i) / 640;
+    points.push(planetElements(day, planet).vectorAu.multiplyScalar(scale.au));
+  }
+  return points;
+}
+
 function rebuildOrbits(date, force = false) {
-  const dayBucket = Math.floor(daysSinceEpoch(date) / 0.25);
-  if (!force && dayBucket === lastOrbitDayBucket) return;
-  lastOrbitDayBucket = dayBucket;
-  setLinePoints(earthOrbit, buildEarthOrbitPoints(date));
-  setLinePoints(moonOrbit, buildMoonOrbitPoints(date));
+  const days = daysSinceEpoch(date);
+  const solarBucket = Math.floor(days / 7);
+  const moonBucket = Math.floor(days);
+  if (force || solarBucket !== lastSolarOrbitBucket) {
+    lastSolarOrbitBucket = solarBucket;
+    setLinePoints(earthOrbit, buildEarthOrbitPoints(date));
+    for (const planet of PLANET_DEFS) {
+      setLinePoints(planetOrbits[planet.id], buildPlanetOrbitPoints(planet, date));
+    }
+  }
+  if (force || moonBucket !== lastMoonOrbitBucket) {
+    lastMoonOrbitBucket = moonBucket;
+    setLinePoints(moonOrbit, buildMoonOrbitPoints(date));
+  }
 }
 
 function applyScale() {
@@ -636,6 +954,15 @@ function applyScale() {
   moonMesh.scale.setScalar(scale.moonRadius);
   earthMarker.scale.setScalar(Math.max(scale.earthRadius * 1.62, scale.earthGlow * 1.15));
   moonMarker.scale.setScalar(Math.max(scale.moonRadius * 2.1, scale.earthGlow * 0.5));
+  focusMarker.scale.setScalar(Math.max(bodyRadiusUnits(focusMode, scale) * 2.2, scale.earthGlow * 0.72));
+  for (const planet of PLANET_DEFS) {
+    const radius = planetRadiusUnits(scale, planet);
+    planetMeshes[planet.id].scale.setScalar(radius);
+    if (planet.id === 'saturn') {
+      saturnRing.scale.setScalar(radius);
+    }
+    setLabelScalar(planetLabels[planet.id], scaleMode === 'real' ? 0.28 : 0.52);
+  }
   setLabelScalar(labels.sun, scaleMode === 'real' ? 0.75 : 1);
   setLabelScalar(labels.earth, scaleMode === 'real' ? 0.28 : 0.78);
   setLabelScalar(labels.moon, scaleMode === 'real' ? 0.24 : 0.58);
@@ -649,6 +976,7 @@ function setButtonStates() {
   buttons.focusEarth.classList.toggle('is-active', focusMode === 'earth');
   buttons.focusSun.classList.toggle('is-active', focusMode === 'sun');
   buttons.toggleOrbits.classList.toggle('is-active', orbitsVisible);
+  buttons.focusTarget.value = focusMode;
 }
 
 function frameFocus() {
@@ -657,17 +985,20 @@ function frameFocus() {
   const earthPosition = earthPositionUnits(state, scale);
   const moonOffset = moonOffsetUnits(state, scale);
   const moonPosition = earthPosition.clone().add(moonOffset);
+  const targetPosition = bodyPositionUnits(focusMode, state, scale);
+  const targetRadius = bodyRadiusUnits(focusMode, scale);
 
   if (focusMode === 'sun') {
-    const distance = scale.au * 1.86;
+    const distance = scale.au * 38;
     controls.target.set(0, 0, 0);
-    camera.position.set(distance * 0.38, distance * 0.48, distance);
+    camera.position.set(distance * 0.28, distance * 0.42, distance);
     previousFocus.set(0, 0, 0);
   } else {
-    const earthToMoon = Math.max(moonOffset.length(), scale.earthRadius * 8, 0.16);
-    controls.target.copy(earthPosition);
-    camera.position.copy(earthPosition).add(new THREE.Vector3(earthToMoon * 0.7, earthToMoon * 0.48, earthToMoon * 1.42));
-    previousFocus.copy(earthPosition);
+    const localContext = focusMode === 'earth' ? moonOffset.length() : scale.au * 0.08;
+    const distance = Math.max(targetRadius * 9, localContext, 6);
+    controls.target.copy(targetPosition);
+    camera.position.copy(targetPosition).add(new THREE.Vector3(distance * 0.7, distance * 0.48, distance * 1.42));
+    previousFocus.copy(targetPosition);
   }
 
   camera.lookAt(controls.target);
@@ -681,6 +1012,8 @@ function updateScene(state) {
   const moonOffset = moonOffsetUnits(state, scale);
   const moonPosition = earthPosition.clone().add(moonOffset);
   const labelLift = Math.max(scale.earthRadius, scale.earthGlow);
+  const focusTarget = bodyPositionUnits(focusMode, state, scale);
+  const focusRadius = bodyRadiusUnits(focusMode, scale);
 
   earthSystem.position.copy(earthPosition);
   moonMesh.position.copy(moonPosition);
@@ -690,17 +1023,40 @@ function updateScene(state) {
   moonOrbit.position.copy(earthPosition);
   moonOrbit.visible = orbitsVisible;
   earthOrbit.visible = orbitsVisible;
+  for (const planet of PLANET_DEFS) {
+    const position = planetPositionUnits(state, scale, planet.id);
+    const mesh = planetMeshes[planet.id];
+    const label = planetLabels[planet.id];
+    const radius = planetRadiusUnits(scale, planet);
+    mesh.position.copy(position);
+    mesh.rotation.y = (state.days * 24 / planet.rotationHours) * Math.PI * 2;
+    label.position.copy(position).add(new THREE.Vector3(0, Math.max(radius * 2.6, 1.1), 0));
+    planetOrbits[planet.id].visible = orbitsVisible;
+    if (planet.id === 'saturn') {
+      saturnRing.position.copy(position);
+      saturnRing.visible = true;
+    }
+  }
 
   labels.sun.position.set(0, scale.sunRadius + 4, 0);
   labels.earth.position.copy(earthPosition).add(new THREE.Vector3(0, labelLift * 2.9 + 1.5, 0));
   labels.moon.position.copy(moonPosition).add(new THREE.Vector3(0, Math.max(scale.moonRadius * 3.8, 1.1), 0));
+  labels.sun.visible = focusMode !== 'sun';
+  labels.earth.visible = focusMode !== 'earth';
+  labels.moon.visible = focusMode !== 'moon';
+  for (const planet of PLANET_DEFS) {
+    planetLabels[planet.id].visible = focusMode !== planet.id;
+  }
 
   earthMarker.position.copy(earthPosition);
   moonMarker.position.copy(moonPosition);
+  focusMarker.position.copy(focusTarget);
+  focusMarker.visible = !['sun', 'earth', 'moon'].includes(focusMode);
+  focusMarker.scale.setScalar(Math.max(focusRadius * 1.8, scaleMode === 'real' ? 0.04 : 0.9));
   earthMarker.lookAt(camera.position);
   moonMarker.lookAt(camera.position);
+  focusMarker.lookAt(camera.position);
 
-  const focusTarget = focusMode === 'earth' ? earthPosition : new THREE.Vector3(0, 0, 0);
   const delta = focusTarget.clone().sub(previousFocus);
   camera.position.add(delta);
   controls.target.add(delta);
@@ -760,6 +1116,11 @@ buttons.focusEarth.addEventListener('click', () => {
 });
 buttons.focusSun.addEventListener('click', () => {
   focusMode = 'sun';
+  setButtonStates();
+  frameFocus();
+});
+buttons.focusTarget.addEventListener('change', () => {
+  focusMode = buttons.focusTarget.value;
   setButtonStates();
   frameFocus();
 });
@@ -833,7 +1194,7 @@ window.solarProject = {
     frameFocus();
   },
   setFocusMode(mode) {
-    if (!['earth', 'sun'].includes(mode)) return;
+    if (!['sun', 'earth', 'moon', ...PLANET_DEFS.map((planet) => planet.id)].includes(mode)) return;
     focusMode = mode;
     setButtonStates();
     frameFocus();

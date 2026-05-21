@@ -37,9 +37,9 @@ internal/planning/      진행 계획
 internal/notes/         핸드오프 및 피드백 메모
 ```
 
-## Step 1 실행
+## 실행
 
-현재 구현은 HTML5 + JavaScript + Three.js CDN 기반의 3D 태양-지구-달 시뮬레이터입니다.
+현재 구현은 HTML5 + JavaScript + Three.js CDN 기반의 3D 태양계 시뮬레이터입니다.
 
 ```powershell
 npm install
@@ -66,5 +66,7 @@ npm run verify
 - 현재 시각 기반 지구 공전 위치
 - GMST 기반 지구 자전
 - 간소화 천체력과 섭동 보정을 적용한 달의 지구 상대 위치
+- 수성, 금성, 화성, 목성, 토성, 천왕성, 해왕성의 현재 위치와 공전 궤도
+- 행성 포커스 드롭다운과 토성 고리 표시
 - 시각화 스케일과 실제 비율 스케일 토글
 - 데스크톱/모바일 Playwright 캔버스 렌더 검증
