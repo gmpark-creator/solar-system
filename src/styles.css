@@ -34,7 +34,8 @@ canvas {
 }
 
 button,
-select {
+select,
+input {
   min-width: 42px;
   height: 36px;
   padding: 0 12px;
@@ -50,7 +51,8 @@ select {
 }
 
 button:hover,
-select:hover {
+select:hover,
+input:hover {
   border-color: rgba(255, 202, 103, 0.72);
   background: rgba(33, 45, 64, 0.92);
 }
@@ -68,6 +70,19 @@ select {
   background-position: calc(100% - 15px) 15px, calc(100% - 10px) 15px;
   background-size: 5px 5px, 5px 5px;
   background-repeat: no-repeat;
+}
+
+input[type="datetime-local"] {
+  width: 212px;
+  color-scheme: dark;
+}
+
+input[type="range"] {
+  width: min(34vw, 320px);
+  min-width: 160px;
+  padding: 0;
+  accent-color: var(--gold);
+  background: transparent;
 }
 
 .hud {
@@ -153,6 +168,26 @@ select {
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.34);
 }
 
+.timebar {
+  position: fixed;
+  left: 50%;
+  bottom: 76px;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  width: max-content;
+  max-width: calc(100vw - 28px);
+  padding: 8px;
+  border: 1px solid var(--panel-line);
+  border-radius: 8px;
+  background: var(--panel);
+  transform: translateX(-50%);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.34);
+}
+
 .loading {
   position: fixed;
   inset: 0;
@@ -219,7 +254,8 @@ select {
   }
 
   button,
-  select {
+  select,
+  input {
     flex: 1 1 64px;
     min-width: 0;
     padding: 0 8px;
@@ -228,5 +264,22 @@ select {
 
   select {
     flex-basis: 112px;
+  }
+
+  input[type="datetime-local"] {
+    flex: 1 1 190px;
+    width: auto;
+  }
+
+  input[type="range"] {
+    flex: 1 1 100%;
+    order: 9;
+    width: 100%;
+  }
+
+  .timebar {
+    bottom: 116px;
+    gap: 6px;
+    width: calc(100vw - 20px);
   }
 }

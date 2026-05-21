@@ -32,7 +32,7 @@ async function inspectViewport(browser, viewport) {
   await page.waitForFunction(() => window.__SOLAR_READY === true, null, { timeout: 45000 });
   await page.waitForTimeout(600);
 
-  const screenshotPath = path.join('internal', 'notes', 'verification', `step2-${viewport.name}.png`);
+  const screenshotPath = path.join('internal', 'notes', 'verification', `step3-${viewport.name}.png`);
   await page.screenshot({ path: screenshotPath, fullPage: false });
 
   const metrics = await page.evaluate(() => {
@@ -40,6 +40,7 @@ async function inspectViewport(browser, viewport) {
     const loading = document.getElementById('loading');
     const hud = document.querySelector('.hud')?.getBoundingClientRect();
     const toolbar = document.querySelector('.toolbar')?.getBoundingClientRect();
+    const timebar = document.querySelector('.timebar')?.getBoundingClientRect();
     const copy = document.createElement('canvas');
     copy.width = 160;
     copy.height = 100;
@@ -66,8 +67,11 @@ async function inspectViewport(browser, viewport) {
       loadingHidden: loading?.classList.contains('is-hidden') ?? false,
       planetCount: Object.keys(window.solarProject.computeState(new Date()).planets).length,
       focusOptionCount: document.querySelectorAll('#focus-target option').length,
+      hasTimeInput: document.getElementById('time-input') instanceof HTMLInputElement,
+      hasTimeRange: document.getElementById('time-range') instanceof HTMLInputElement,
       hud: hud ? { width: hud.width, height: hud.height, top: hud.top, left: hud.left } : null,
       toolbar: toolbar ? { width: toolbar.width, height: toolbar.height, bottom: innerHeight - toolbar.bottom, left: toolbar.left } : null,
+      timebar: timebar ? { width: timebar.width, height: timebar.height, bottom: innerHeight - timebar.bottom, left: timebar.left } : null,
     };
   });
 
@@ -77,11 +81,34 @@ async function inspectViewport(browser, viewport) {
   await page.waitForTimeout(180);
   await page.selectOption('#focus-target', 'neptune');
   await page.waitForTimeout(180);
+  await page.evaluate(() => {
+    const input = document.getElementById('time-input');
+    input.value = '2026-03-04T05:06:07';
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await page.waitForTimeout(180);
+  const inputIso = await page.evaluate(() => window.solarProject.getSimulationDate());
+  await page.click('#time-forward-day');
+  await page.waitForTimeout(180);
+  const forwardIso = await page.evaluate(() => window.solarProject.getSimulationDate());
+  await page.evaluate(() => {
+    const range = document.getElementById('time-range');
+    range.value = '2';
+    range.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await page.waitForTimeout(180);
+  const rangeIso = await page.evaluate(() => window.solarProject.getSimulationDate());
+  await page.click('#time-live');
+  await page.waitForTimeout(180);
   const interaction = await page.evaluate(() => ({
     focusValue: document.getElementById('focus-target').value,
     scaleText: document.getElementById('scale-mode').textContent,
+    inputValue: document.getElementById('time-input').value,
+    liveDeltaMs: Math.abs(Date.parse(window.solarProject.getSimulationDate()) - Date.now()),
     ready: window.__SOLAR_READY === true,
   }));
+  interaction.forwardDeltaMs = Date.parse(forwardIso) - Date.parse(inputIso);
+  interaction.rangeDeltaMs = Date.parse(rangeIso) - Date.parse(inputIso);
 
   await page.close();
   return { viewport: viewport.name, screenshotPath, messages, metrics, interaction };
@@ -100,8 +127,20 @@ function assertResult(result) {
   if (result.metrics.focusOptionCount !== 10) {
     throw new Error(`${result.viewport} expected 10 focus options, got ${result.metrics.focusOptionCount}`);
   }
+  if (!result.metrics.hasTimeInput || !result.metrics.hasTimeRange) {
+    throw new Error(`${result.viewport} expected date input and time range controls`);
+  }
   if (result.interaction.focusValue !== 'neptune' || result.interaction.scaleText !== 'True' || !result.interaction.ready) {
     throw new Error(`${result.viewport} focus/scale interaction failed: ${JSON.stringify(result.interaction)}`);
+  }
+  if (Math.abs(result.interaction.forwardDeltaMs - 86400000) > 1000) {
+    throw new Error(`${result.viewport} +1d interaction failed: ${JSON.stringify(result.interaction)}`);
+  }
+  if (Math.abs(result.interaction.rangeDeltaMs - 172800000) > 1000) {
+    throw new Error(`${result.viewport} range interaction failed: ${JSON.stringify(result.interaction)}`);
+  }
+  if (result.interaction.liveDeltaMs > 5000) {
+    throw new Error(`${result.viewport} live interaction failed: ${JSON.stringify(result.interaction)}`);
   }
   if (result.metrics.litRatio < 0.005) {
     throw new Error(`${result.viewport} canvas appears blank: ${JSON.stringify(result.metrics)}`);

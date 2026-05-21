@@ -35,6 +35,8 @@ const SCALES = {
 };
 
 const SPEEDS = [-604800, -86400, -21600, -3600, -600, -60, -10, -1, 1, 10, 60, 600, 3600, 21600, 86400, 604800];
+const TIMELINE_SPAN_DAYS = 730;
+const TIMELINE_RECENTER_THRESHOLD_DAYS = 700;
 
 const PLANET_DEFS = [
   {
@@ -199,11 +201,19 @@ const buttons = {
   pause: document.getElementById('pause'),
   speedUp: document.getElementById('speed-up'),
   now: document.getElementById('now'),
+  timeBackDay: document.getElementById('time-back-day'),
+  timeForwardDay: document.getElementById('time-forward-day'),
+  timeLive: document.getElementById('time-live'),
   focusEarth: document.getElementById('focus-earth'),
   focusSun: document.getElementById('focus-sun'),
   focusTarget: document.getElementById('focus-target'),
   scaleMode: document.getElementById('scale-mode'),
   toggleOrbits: document.getElementById('toggle-orbits'),
+};
+
+const timeControls = {
+  input: document.getElementById('time-input'),
+  range: document.getElementById('time-range'),
 };
 
 const loading = document.getElementById('loading');
@@ -845,15 +855,68 @@ let orbitsVisible = true;
 let paused = false;
 let speedIndex = SPEEDS.indexOf(1);
 let simulationMs = Date.now();
+let timelineAnchorMs = simulationMs;
 let previousAnimationMs = performance.now();
 let previousFocus = new THREE.Vector3();
 let lastHudUpdate = 0;
 let lastMoonOrbitBucket = Number.NaN;
 let lastSolarOrbitBucket = Number.NaN;
 let firstFrameRendered = false;
+let timeInputFocused = false;
 
 function currentScale() {
   return SCALES[scaleMode];
+}
+
+function localDateTimeValue(ms) {
+  const date = new Date(ms);
+  const localMs = ms - date.getTimezoneOffset() * 60000;
+  return new Date(localMs).toISOString().slice(0, 19);
+}
+
+function parseLocalDateTime(value) {
+  const parsed = new Date(value);
+  return Number.isFinite(parsed.getTime()) ? parsed.getTime() : null;
+}
+
+function recenterTimeline(ms = simulationMs) {
+  timelineAnchorMs = ms;
+}
+
+function updateTimeControls() {
+  const offsetDays = (simulationMs - timelineAnchorMs) / DAY_MS;
+  if (Math.abs(offsetDays) > TIMELINE_RECENTER_THRESHOLD_DAYS) {
+    recenterTimeline(simulationMs);
+  }
+
+  const nextOffsetDays = (simulationMs - timelineAnchorMs) / DAY_MS;
+  timeControls.range.value = String(Math.max(-TIMELINE_SPAN_DAYS, Math.min(TIMELINE_SPAN_DAYS, nextOffsetDays)));
+  if (!timeInputFocused) {
+    timeControls.input.value = localDateTimeValue(simulationMs);
+  }
+
+  const nearLive = Math.abs(simulationMs - Date.now()) < 2500 && SPEEDS[speedIndex] === 1 && !paused;
+  buttons.timeLive.classList.toggle('is-active', nearLive);
+}
+
+function setSimulationTime(ms, options = {}) {
+  if (!Number.isFinite(ms)) return;
+  simulationMs = ms;
+  if (options.recenter) recenterTimeline(ms);
+  if (options.pause) paused = true;
+  setButtonStates();
+  updateTimeControls();
+  frameFocus();
+}
+
+function jumpToLive() {
+  simulationMs = Date.now();
+  recenterTimeline(simulationMs);
+  speedIndex = SPEEDS.indexOf(1);
+  paused = false;
+  setButtonStates();
+  updateTimeControls();
+  frameFocus();
 }
 
 function earthPositionUnits(state, scale) {
@@ -1090,10 +1153,12 @@ function updateHud(state, now) {
   readouts.phase.textContent = `${moonPhaseName(state.phaseAngle)} ${Math.round(state.illumination * 100)}%`;
   readouts.moonDistance.textContent = formatKm(state.earthMoonKm);
   readouts.sunDistance.textContent = formatKm(state.earthSunKm);
+  updateTimeControls();
 }
 
 function changeSpeed(delta) {
   speedIndex = Math.max(0, Math.min(SPEEDS.length - 1, speedIndex + delta));
+  updateTimeControls();
 }
 
 buttons.speedDown.addEventListener('click', () => changeSpeed(-1));
@@ -1101,13 +1166,36 @@ buttons.speedUp.addEventListener('click', () => changeSpeed(1));
 buttons.pause.addEventListener('click', () => {
   paused = !paused;
   setButtonStates();
+  updateTimeControls();
 });
 buttons.now.addEventListener('click', () => {
-  simulationMs = Date.now();
-  speedIndex = SPEEDS.indexOf(1);
-  paused = false;
-  setButtonStates();
-  frameFocus();
+  jumpToLive();
+});
+buttons.timeLive.addEventListener('click', () => {
+  jumpToLive();
+});
+buttons.timeBackDay.addEventListener('click', () => {
+  setSimulationTime(simulationMs - DAY_MS, { pause: true });
+});
+buttons.timeForwardDay.addEventListener('click', () => {
+  setSimulationTime(simulationMs + DAY_MS, { pause: true });
+});
+timeControls.input.addEventListener('focus', () => {
+  timeInputFocused = true;
+});
+timeControls.input.addEventListener('blur', () => {
+  timeInputFocused = false;
+  updateTimeControls();
+});
+timeControls.input.addEventListener('change', () => {
+  const nextMs = parseLocalDateTime(timeControls.input.value);
+  if (nextMs !== null) {
+    setSimulationTime(nextMs, { pause: true, recenter: true });
+  }
+});
+timeControls.range.addEventListener('input', () => {
+  const offsetDays = Number(timeControls.range.value);
+  setSimulationTime(timelineAnchorMs + offsetDays * DAY_MS, { pause: true });
 });
 buttons.focusEarth.addEventListener('click', () => {
   focusMode = 'earth';
@@ -1140,6 +1228,7 @@ window.addEventListener('keydown', (event) => {
     event.preventDefault();
     paused = !paused;
     setButtonStates();
+    updateTimeControls();
   } else if (event.code === 'ArrowLeft') {
     changeSpeed(-1);
   } else if (event.code === 'ArrowRight') {
@@ -1182,11 +1271,19 @@ function animate(now) {
 
 applyScale();
 setButtonStates();
+updateTimeControls();
 frameFocus();
 requestAnimationFrame(animate);
 
 window.solarProject = {
   computeState,
+  getSimulationDate() {
+    return new Date(simulationMs).toISOString();
+  },
+  setSimulationDate(value) {
+    const nextMs = value instanceof Date ? value.getTime() : new Date(value).getTime();
+    setSimulationTime(nextMs, { pause: true, recenter: true });
+  },
   setScaleMode(mode) {
     if (!SCALES[mode]) return;
     scaleMode = mode;

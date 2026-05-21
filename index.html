@@ -25,7 +25,7 @@
 <body>
   <main id="app" aria-label="태양계 3D 시뮬레이션">
     <section class="hud" aria-label="시뮬레이션 상태">
-      <div class="hud-title">태양계 프로젝트 <span>Step 2</span></div>
+      <div class="hud-title">태양계 프로젝트 <span>Step 3</span></div>
       <dl>
         <div><dt>현재 시각</dt><dd id="readout-local">-</dd></div>
         <div><dt>UTC</dt><dd id="readout-utc">-</dd></div>
@@ -36,6 +36,14 @@
         <div><dt>지구-태양</dt><dd id="readout-sun-distance">-</dd></div>
       </dl>
     </section>
+
+    <div class="timebar" aria-label="시간 탐색">
+      <button id="time-back-day" type="button" title="하루 전" aria-label="하루 전">-1d</button>
+      <input id="time-input" type="datetime-local" step="1" aria-label="시뮬레이션 시각" />
+      <input id="time-range" type="range" min="-730" max="730" step="0.25" value="0" aria-label="날짜 범위" />
+      <button id="time-forward-day" type="button" title="하루 후" aria-label="하루 후">+1d</button>
+      <button id="time-live" type="button" title="실시간" aria-label="실시간">Live</button>
+    </div>
 
     <div class="toolbar" aria-label="시뮬레이션 제어">
       <button id="speed-down" type="button" title="느리게" aria-label="느리게">-</button>

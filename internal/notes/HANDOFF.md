@@ -62,3 +62,22 @@ npm run verify
 ```
 
 Latest verification passed on desktop `1440x900` and mobile `390x844`; screenshots were written as `step2-desktop.png` and `step2-mobile.png` under `internal/notes/verification/`.
+
+## Step 3 Codex Implementation
+
+Implemented:
+
+- Time navigation panel above the main toolbar.
+- Direct local `datetime-local` input.
+- `-1d` and `+1d` controls.
+- A ±730 day timeline slider centered on the current selected date.
+- `Live` reset that returns to current real time at 1x speed.
+- Public debug helpers `window.solarProject.getSimulationDate()` and `window.solarProject.setSimulationDate()`.
+
+Verification command:
+
+```powershell
+npm run verify
+```
+
+Latest verification passed on desktop `1440x900` and mobile `390x844`; screenshots were written as `step3-desktop.png` and `step3-mobile.png` under `internal/notes/verification/`.
