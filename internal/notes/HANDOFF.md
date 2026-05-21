@@ -19,3 +19,29 @@ Peer check was verified with:
 ```
 
 The script currently finds `..\solar-system` as the first existing peer candidate after the preferred Claude folder names. Treat that folder as read-only from the Codex lane unless 박사 explicitly says otherwise.
+
+## Step 1 Codex Implementation
+
+Implemented files:
+
+- `index.html`
+- `src/styles.css`
+- `src/app.js`
+- `tools/serve-local.mjs`
+- `tools/verify-playwright.mjs`
+- `package.json`
+- `package-lock.json`
+
+Local app URL while server is running:
+
+```text
+http://127.0.0.1:5178/
+```
+
+Verification command:
+
+```powershell
+npm run verify
+```
+
+Latest verification passed on desktop `1440x900` and mobile `390x844`; screenshots were written under `internal/notes/verification/` and are gitignored as local evidence artifacts.

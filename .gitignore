@@ -27,3 +27,6 @@ Thumbs.db
 *.mov
 *.avi
 *.mkv
+
+# Local visual verification artifacts
+internal/notes/verification/*.png

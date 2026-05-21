@@ -36,3 +36,35 @@ tools/                  로컬 점검 스크립트
 internal/planning/      진행 계획
 internal/notes/         핸드오프 및 피드백 메모
 ```
+
+## Step 1 실행
+
+현재 구현은 HTML5 + JavaScript + Three.js CDN 기반의 3D 태양-지구-달 시뮬레이터입니다.
+
+```powershell
+npm install
+npm run serve
+```
+
+브라우저에서 엽니다.
+
+```text
+http://127.0.0.1:5178/
+```
+
+검증은 다음 명령으로 실행합니다. 로컬 서버가 먼저 떠 있어야 합니다.
+
+```powershell
+npm run verify
+```
+
+## 구현 범위
+
+- 우주 배경 별 필드
+- OrbitControls 기반 회전/줌
+- 태양, 지구, 달 3D 모델
+- 현재 시각 기반 지구 공전 위치
+- GMST 기반 지구 자전
+- 간소화 천체력과 섭동 보정을 적용한 달의 지구 상대 위치
+- 시각화 스케일과 실제 비율 스케일 토글
+- 데스크톱/모바일 Playwright 캔버스 렌더 검증

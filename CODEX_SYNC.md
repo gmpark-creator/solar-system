@@ -9,9 +9,11 @@
 
 ## Current Status
 
-- Initial Codex workspace scaffold created.
-- No application stack has been selected yet.
-- No product requirements have been implemented yet.
+- Step 1 implemented in the Codex lane.
+- Stack: HTML5 + JavaScript + Three.js CDN, with local Node static server for development.
+- Entry point: `index.html`
+- App code: `src/app.js`, `src/styles.css`
+- Verification: `npm run verify` passed for desktop and mobile viewports.
 
 ## Peer Review Setup
 
@@ -31,6 +33,5 @@ Current detected peer candidate:
 
 ## Next Needed Input
 
-- 프로젝트 형태: 웹앱, 게임, 시뮬레이션, 데스크톱 앱, 교육용 시각화 등
-- 원하는 기술 스택이 있는지
-- 첫 화면 또는 핵심 기능 범위
+- Step 2 범위 결정: 나머지 행성 위치/궤도 추가, 행성 텍스처 개선, 또는 달/조석 계산 정밀도 강화
+- Claude lane과의 구현 비교 후 반영할 항목 선택

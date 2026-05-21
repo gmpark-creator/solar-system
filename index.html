@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>태양계 프로젝트 - Codex Step 1</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="./src/styles.css" />
+  <script>
+    window.addEventListener('error', (event) => {
+      const loading = document.getElementById('loading');
+      if (!loading) return;
+      loading.classList.add('is-error');
+      loading.innerHTML = '<strong>실행 오류</strong><span>' + (event.message || '알 수 없는 오류') + '</span>';
+    });
+    window.addEventListener('unhandledrejection', (event) => {
+      const loading = document.getElementById('loading');
+      if (!loading) return;
+      const reason = event.reason && event.reason.message ? event.reason.message : String(event.reason || '');
+      loading.classList.add('is-error');
+      loading.innerHTML = '<strong>실행 오류</strong><span>' + reason + '</span>';
+    });
+  </script>
+</head>
+<body>
+  <main id="app" aria-label="태양계 3D 시뮬레이션">
+    <section class="hud" aria-label="시뮬레이션 상태">
+      <div class="hud-title">태양계 프로젝트 <span>Step 1</span></div>
+      <dl>
+        <div><dt>현재 시각</dt><dd id="readout-local">-</dd></div>
+        <div><dt>UTC</dt><dd id="readout-utc">-</dd></div>
+        <div><dt>배속</dt><dd id="readout-speed">1x</dd></div>
+        <div><dt>지구 자전각</dt><dd id="readout-gmst">-</dd></div>
+        <div><dt>달 위상</dt><dd id="readout-phase">-</dd></div>
+        <div><dt>지구-달</dt><dd id="readout-moon-distance">-</dd></div>
+        <div><dt>지구-태양</dt><dd id="readout-sun-distance">-</dd></div>
+      </dl>
+    </section>
+
+    <div class="toolbar" aria-label="시뮬레이션 제어">
+      <button id="speed-down" type="button" title="느리게" aria-label="느리게">-</button>
+      <button id="pause" type="button" title="일시정지" aria-label="일시정지">Pause</button>
+      <button id="speed-up" type="button" title="빠르게" aria-label="빠르게">+</button>
+      <button id="now" type="button" title="현재 시각" aria-label="현재 시각">Now</button>
+      <button id="focus-earth" type="button" title="지구 중심" aria-label="지구 중심">Earth</button>
+      <button id="focus-sun" type="button" title="태양 중심" aria-label="태양 중심">Sun</button>
+      <button id="scale-mode" type="button" title="스케일 전환" aria-label="스케일 전환">Visual</button>
+      <button id="toggle-orbits" type="button" title="궤도 표시" aria-label="궤도 표시">Orbits</button>
+    </div>
+
+    <div id="loading" class="loading" role="status">
+      <span class="loader"></span>
+      <strong>태양계를 불러오는 중</strong>
+    </div>
+  </main>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
