@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>태양계 시뮬레이터 — Codex 버전</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="./src/styles.css" />
+  <script>
+    window.addEventListener('error', (event) => {
+      const loading = document.getElementById('loading');
+      if (!loading) return;
+      loading.classList.add('is-error');
+      loading.innerHTML = '<strong>실행 오류</strong><span>' + (event.message || '알 수 없는 오류') + '</span>';
+    });
+    window.addEventListener('unhandledrejection', (event) => {
+      const loading = document.getElementById('loading');
+      if (!loading) return;
+      const reason = event.reason && event.reason.message ? event.reason.message : String(event.reason || '');
+      loading.classList.add('is-error');
+      loading.innerHTML = '<strong>실행 오류</strong><span>' + reason + '</span>';
+    });
+  </script>
+</head>
+<body>
+  <main id="app" aria-label="태양계 3D 시뮬레이션">
+    <section class="hud" aria-label="시뮬레이션 상태">
+      <div class="hud-title">
+        <strong>태양계 프로젝트</strong>
+        <span>Step 4</span>
+        <a class="hud-report-link" href="./report.html" title="진행 보고서" aria-label="진행 보고서">Report</a>
+      </div>
+      <dl>
+        <div><dt>시뮬 날짜</dt><dd id="readout-date">2026-05-22</dd></div>
+        <div><dt>현재 시각</dt><dd id="readout-local">-</dd></div>
+        <div><dt>UTC</dt><dd id="readout-utc">-</dd></div>
+        <div><dt>배속</dt><dd id="readout-speed">1x</dd></div>
+        <div><dt>지구 자전각</dt><dd id="readout-gmst">-</dd></div>
+        <div><dt>달 위상</dt><dd id="readout-phase">-</dd></div>
+        <div><dt>지구-달</dt><dd id="readout-moon-distance">-</dd></div>
+        <div><dt>지구-태양</dt><dd id="readout-sun-distance">-</dd></div>
+      </dl>
+    </section>
+
+    <div class="timebar" aria-label="시간 탐색">
+      <button id="time-back-day" type="button" title="하루 전" aria-label="하루 전">-1d</button>
+      <input id="time-input" type="datetime-local" step="1" aria-label="시뮬레이션 시각" />
+      <input id="time-range" type="range" min="-730" max="730" step="0.25" value="0" aria-label="날짜 범위" />
+      <button id="time-forward-day" type="button" title="하루 후" aria-label="하루 후">+1d</button>
+      <button id="time-live" type="button" title="실시간" aria-label="실시간">Live</button>
+      <div class="time-jumps" aria-label="날짜 점프">
+        <button type="button" data-time-jump="-7d">-1w</button>
+        <button type="button" data-time-jump="+7d">+1w</button>
+        <button type="button" data-time-jump="-1m">-1m</button>
+        <button type="button" data-time-jump="+1m">+1m</button>
+        <button type="button" data-time-jump="-3m">-3m</button>
+        <button type="button" data-time-jump="+3m">+3m</button>
+        <button type="button" data-time-jump="-6m">-6m</button>
+        <button type="button" data-time-jump="+6m">+6m</button>
+        <button type="button" data-time-jump="-1y">-1y</button>
+        <button type="button" data-time-jump="+1y">+1y</button>
+        <button id="time-reset" type="button">2026-05-22 Reset</button>
+      </div>
+    </div>
+
+    <div class="toolbar" aria-label="시뮬레이션 제어">
+      <button id="speed-down" type="button" title="느리게" aria-label="느리게">-</button>
+      <button id="pause" type="button" title="일시정지" aria-label="일시정지">Pause</button>
+      <button id="speed-up" type="button" title="빠르게" aria-label="빠르게">+</button>
+      <div class="speed-presets" aria-label="배속 프리셋">
+        <button type="button" data-speed="1">1x</button>
+        <button type="button" data-speed="10">10x</button>
+        <button type="button" data-speed="100">100x</button>
+      </div>
+      <button id="now" type="button" title="현재 시각" aria-label="현재 시각">Now</button>
+      <button id="focus-earth" type="button" title="지구 중심" aria-label="지구 중심">Earth</button>
+      <button id="focus-sun" type="button" title="태양 중심" aria-label="태양 중심">Sun</button>
+      <select id="focus-target" title="포커스 대상" aria-label="포커스 대상">
+        <option value="sun">Sun</option>
+        <option value="mercury">Mercury</option>
+        <option value="venus">Venus</option>
+        <option value="earth" selected>Earth</option>
+        <option value="moon">Moon</option>
+        <option value="mars">Mars</option>
+        <option value="jupiter">Jupiter</option>
+        <option value="saturn">Saturn</option>
+        <option value="uranus">Uranus</option>
+        <option value="neptune">Neptune</option>
+      </select>
+      <button id="scale-mode" type="button" title="스케일 전환" aria-label="스케일 전환">Visual</button>
+      <button id="toggle-orbits" type="button" title="궤도 표시" aria-label="궤도 표시">Orbits</button>
+    </div>
+
+    <aside id="info-panel" class="info-panel" aria-label="천체 정보" hidden>
+      <button id="overview" class="overview-button" type="button">전체 보기</button>
+      <div class="info-kicker" id="info-kicker">Planet Profile</div>
+      <h2 id="info-title">Earth</h2>
+      <dl>
+        <div><dt>지름</dt><dd id="info-diameter">-</dd></div>
+        <div><dt>공전 주기</dt><dd id="info-orbit">-</dd></div>
+        <div><dt>자전 주기</dt><dd id="info-rotation">-</dd></div>
+      </dl>
+      <p id="info-summary"></p>
+    </aside>
+
+    <div id="loading" class="loading" role="status">
+      <span class="loader"></span>
+      <strong>태양계를 불러오는 중</strong>
+    </div>
+  </main>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="./src/app.js"></script>
+
+  <a href="../" class="version-badge">🛰️ Codex 버전 · 두 버전 비교 →</a>
+  <style>
+  .version-badge{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:99999;
+   padding:7px 14px;border-radius:999px;background:rgba(10,12,24,.86);
+   border:1px solid rgba(150,180,255,.34);color:#dfe6f6;font:600 12px system-ui,sans-serif;
+   text-decoration:none;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);white-space:nowrap}
+  .version-badge:hover{background:rgba(34,44,78,.96)}
+  </style>
+</body>
+</html>
