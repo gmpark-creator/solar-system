@@ -105,3 +105,17 @@ npm run verify
 ```
 
 Latest verification passed on desktop `1440x900` and mobile `390x844`; screenshots were written as `step4-desktop.png` and `step4-mobile.png` under `internal/notes/verification/`.
+
+## Claude Peer Tracking
+
+Claude peer folder `..\solar-system` was checked on 2026-05-22.
+
+- Branch: `master`
+- Local HEAD: `776f71f Step 4: 타임머신·인터랙션·비주얼 고도화`
+- Remote `origin/master`: same SHA
+- Remote URL: `https://github.com/gmpark-creator/solar-system.git`
+- README reports Steps 1-4 complete and documents GitHub Pages URL.
+
+Detailed tracker:
+
+- `internal/peer/claude-solar-progress.md`

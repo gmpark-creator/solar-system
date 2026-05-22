@@ -35,7 +35,9 @@ Current detected peer candidate:
 
 - `..\solar-system`
 - Branch: `master`
-- Latest seen commit: `b3a264b 태양계 프로젝트 초기 세팅 — git init, .gitignore, README`
+- Remote: `https://github.com/gmpark-creator/solar-system.git`
+- Latest seen local/remote commit: `776f71f Step 4: 타임머신·인터랙션·비주얼 고도화`
+- Peer progress tracker: `internal/peer/claude-solar-progress.md`
 
 ## Next Needed Input
 
