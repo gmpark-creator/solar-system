@@ -1,7 +1,9 @@
 import { chromium } from 'playwright';
 import path from 'node:path';
 
-const url = process.env.SOLAR_PROJECT_URL || 'http://127.0.0.1:5178/';
+const appUrl = process.env.SOLAR_PROJECT_URL || 'http://127.0.0.1:5178/';
+const reportUrl = new URL('./report.html', appUrl).toString();
+const indexUrl = new URL('./index.html', appUrl).toString();
 const viewports = [
   { name: 'desktop', width: 1440, height: 900, isMobile: false },
   { name: 'mobile', width: 390, height: 844, isMobile: true },
@@ -15,7 +17,7 @@ async function launchBrowser() {
   }
 }
 
-async function inspectViewport(browser, viewport) {
+async function inspectSimulatorViewport(browser, viewport) {
   const page = await browser.newPage({
     viewport: { width: viewport.width, height: viewport.height },
     isMobile: viewport.isMobile,
@@ -28,7 +30,7 @@ async function inspectViewport(browser, viewport) {
   });
   page.on('pageerror', (error) => messages.push(`pageerror: ${error.message}`));
 
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+  await page.goto(appUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
   await page.waitForFunction(() => window.__SOLAR_READY === true, null, { timeout: 45000 });
   await page.waitForTimeout(600);
 
@@ -69,12 +71,13 @@ async function inspectViewport(browser, viewport) {
       focusOptionCount: document.querySelectorAll('#focus-target option').length,
       hasTimeInput: document.getElementById('time-input') instanceof HTMLInputElement,
       hasTimeRange: document.getElementById('time-range') instanceof HTMLInputElement,
+      hasReportLink: document.querySelector('.hud-report-link[href="./report.html"]') instanceof HTMLAnchorElement,
       dateLabel: document.getElementById('readout-date')?.textContent,
       jumpButtonCount: document.querySelectorAll('[data-time-jump]').length,
       speedPresetCount: document.querySelectorAll('[data-speed]').length,
       hud: hud ? { width: hud.width, height: hud.height, top: hud.top, left: hud.left } : null,
-      toolbar: toolbar ? { width: toolbar.width, height: toolbar.height, bottom: innerHeight - toolbar.bottom, left: toolbar.left } : null,
-      timebar: timebar ? { width: timebar.width, height: timebar.height, bottom: innerHeight - timebar.bottom, left: timebar.left } : null,
+      toolbar: toolbar ? { width: toolbar.width, height: toolbar.height, top: toolbar.top, bottom: innerHeight - toolbar.bottom, left: toolbar.left } : null,
+      timebar: timebar ? { width: timebar.width, height: timebar.height, top: timebar.top, bottom: innerHeight - timebar.bottom, left: timebar.left } : null,
     };
   });
 
@@ -158,7 +161,7 @@ async function inspectViewport(browser, viewport) {
   return { viewport: viewport.name, screenshotPath, messages, metrics, interaction };
 }
 
-function assertResult(result) {
+function assertSimulatorResult(result) {
   if (result.messages.length) {
     throw new Error(`${result.viewport} console output: ${result.messages.join(' | ')}`);
   }
@@ -173,6 +176,9 @@ function assertResult(result) {
   }
   if (!result.metrics.hasTimeInput || !result.metrics.hasTimeRange) {
     throw new Error(`${result.viewport} expected date input and time range controls`);
+  }
+  if (!result.metrics.hasReportLink) {
+    throw new Error(`${result.viewport} expected simulator report link`);
   }
   if (result.metrics.jumpButtonCount !== 10 || result.metrics.speedPresetCount !== 3) {
     throw new Error(`${result.viewport} expected jump buttons and speed presets: ${JSON.stringify(result.metrics)}`);
@@ -207,15 +213,120 @@ function assertResult(result) {
   if (result.metrics.colorBucketCount < 12) {
     throw new Error(`${result.viewport} canvas has too little color variation: ${JSON.stringify(result.metrics)}`);
   }
+  if (result.metrics.toolbar && result.metrics.timebar && result.metrics.timebar.top + result.metrics.timebar.height > result.metrics.toolbar.top - 2) {
+    throw new Error(`${result.viewport} timebar overlaps toolbar: ${JSON.stringify(result.metrics)}`);
+  }
+}
+
+async function inspectReportViewport(browser, viewport) {
+  const page = await browser.newPage({
+    viewport: { width: viewport.width, height: viewport.height },
+    isMobile: viewport.isMobile,
+  });
+  const messages = [];
+  page.on('console', (message) => {
+    if (['error', 'warning'].includes(message.type())) {
+      messages.push(`${message.type()}: ${message.text()}`);
+    }
+  });
+  page.on('pageerror', (error) => messages.push(`pageerror: ${error.message}`));
+
+  await page.goto(reportUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
+  await page.waitForSelector('#metrics-grid .metric', { timeout: 45000 });
+  await page.waitForTimeout(300);
+
+  const screenshotPath = path.join('internal', 'notes', 'verification', `report-${viewport.name}.png`);
+  await page.screenshot({ path: screenshotPath, fullPage: false });
+
+  const metrics = await page.evaluate(() => {
+    const canvas = document.getElementById('orbit-map');
+    const copy = document.createElement('canvas');
+    copy.width = 160;
+    copy.height = 100;
+    const context = copy.getContext('2d', { willReadFrequently: true });
+    context.drawImage(canvas, 0, 0, copy.width, copy.height);
+    const data = context.getImageData(0, 0, copy.width, copy.height).data;
+    let litPixels = 0;
+    const colorBuckets = new Set();
+
+    for (let i = 0; i < data.length; i += 4) {
+      const red = data[i];
+      const green = data[i + 1];
+      const blue = data[i + 2];
+      const total = red + green + blue;
+      if (total > 18) litPixels += 1;
+      if (total > 50) colorBuckets.add(`${red >> 4},${green >> 4},${blue >> 4}`);
+    }
+
+    const topbar = document.querySelector('.topbar')?.getBoundingClientRect();
+    const hero = document.querySelector('.hero')?.getBoundingClientRect();
+    const navHrefs = Array.from(document.querySelectorAll('.topbar nav a')).map((link) => link.href);
+
+    return {
+      title: document.title,
+      codexStep: document.getElementById('codex-step')?.textContent,
+      claudeStep: document.getElementById('claude-step')?.textContent,
+      lastSync: document.getElementById('last-sync')?.textContent,
+      metricCount: document.querySelectorAll('#metrics-grid .metric').length,
+      timelineCount: document.querySelectorAll('#timeline li').length,
+      codexItems: document.querySelectorAll('#codex-lane li').length,
+      claudeItems: document.querySelectorAll('#claude-lane li').length,
+      verificationItems: document.querySelectorAll('#verification-list li').length,
+      riskItems: document.querySelectorAll('#risk-list li').length,
+      navHrefs,
+      canvasWidth: canvas.width,
+      canvasHeight: canvas.height,
+      litRatio: litPixels / (data.length / 4),
+      colorBucketCount: colorBuckets.size,
+      topbar: topbar ? { width: topbar.width, height: topbar.height, top: topbar.top, left: topbar.left } : null,
+      hero: hero ? { width: hero.width, height: hero.height, top: hero.top, left: hero.left } : null,
+    };
+  });
+
+  await page.click('a[href="./index.html"]');
+  await page.waitForURL(indexUrl, { timeout: 45000 });
+  const simulatorLinkWorks = page.url() === indexUrl;
+
+  await page.close();
+  return { viewport: viewport.name, screenshotPath, messages, metrics, simulatorLinkWorks };
+}
+
+function assertReportResult(result) {
+  if (result.messages.length) {
+    throw new Error(`${result.viewport} report console output: ${result.messages.join(' | ')}`);
+  }
+  if (result.metrics.codexStep !== 'Step 4' || result.metrics.claudeStep !== 'Step 4') {
+    throw new Error(`${result.viewport} report step status failed: ${JSON.stringify(result.metrics)}`);
+  }
+  if (result.metrics.metricCount !== 4 || result.metrics.timelineCount !== 4) {
+    throw new Error(`${result.viewport} report expected 4 metrics and 4 timeline entries: ${JSON.stringify(result.metrics)}`);
+  }
+  if (result.metrics.codexItems < 7 || result.metrics.claudeItems < 7) {
+    throw new Error(`${result.viewport} report lane content is incomplete: ${JSON.stringify(result.metrics)}`);
+  }
+  if (result.metrics.verificationItems < 8 || result.metrics.riskItems < 4) {
+    throw new Error(`${result.viewport} report verification/risk content is incomplete: ${JSON.stringify(result.metrics)}`);
+  }
+  if (!result.metrics.navHrefs.some((href) => href.endsWith('/index.html')) || !result.metrics.navHrefs.some((href) => href.includes('github.com/gmpark-creator/solar-system'))) {
+    throw new Error(`${result.viewport} report navigation links missing: ${JSON.stringify(result.metrics.navHrefs)}`);
+  }
+  if (!result.simulatorLinkWorks) {
+    throw new Error(`${result.viewport} report simulator navigation failed`);
+  }
+  if (result.metrics.litRatio < 0.002 || result.metrics.colorBucketCount < 4) {
+    throw new Error(`${result.viewport} report orbit canvas appears blank: ${JSON.stringify(result.metrics)}`);
+  }
 }
 
 const browser = await launchBrowser();
 const results = [];
 try {
   for (const viewport of viewports) {
-    const result = await inspectViewport(browser, viewport);
-    assertResult(result);
-    results.push(result);
+    const simulator = await inspectSimulatorViewport(browser, viewport);
+    assertSimulatorResult(simulator);
+    const report = await inspectReportViewport(browser, viewport);
+    assertReportResult(report);
+    results.push({ viewport: viewport.name, simulator, report });
   }
 } finally {
   await browser.close();

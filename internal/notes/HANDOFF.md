@@ -119,3 +119,27 @@ Claude peer folder `..\solar-system` was checked on 2026-05-22.
 Detailed tracker:
 
 - `internal/peer/claude-solar-progress.md`
+
+## Report Dashboard Slice
+
+Implemented:
+
+- `report.html` Codex-style comparison report page.
+- `src/report-data.js` structured Codex/Claude status data using the latest checked Claude README/GitHub Pages baseline.
+- `src/report.js` renderer for metrics, lane comparison, timeline, verification log, and red-team notes.
+- `src/report.css` operational dashboard styling with a canvas orbit-map background.
+- Main simulator HUD link to `report.html`.
+- Playwright verification for the report page on desktop `1440x900` and mobile `390x844`.
+
+Local report URL while the server is running:
+
+```text
+http://127.0.0.1:5178/report.html
+```
+
+Claude remains read-only from this lane. Latest checked Claude basis:
+
+- Folder: `..\solar-system`
+- Branch: `master`
+- Commit: `776f71f Step 4: 타임머신·인터랙션·비주얼 고도화`
+- Live URL: `https://gmpark-creator.github.io/solar-system/`

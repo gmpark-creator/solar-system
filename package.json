@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "serve": "node tools/serve-local.mjs 5178",
-    "check": "node --check src/app.js",
-    "verify": "node --check src/app.js && node tools/verify-playwright.mjs"
+    "check": "node --check src/app.js && node --check src/report-data.js && node --check src/report.js && node --check tools/verify-playwright.mjs",
+    "verify": "npm run check && node tools/verify-playwright.mjs"
   },
   "devDependencies": {
     "playwright": "^1.60.0"

@@ -24,3 +24,4 @@
 - Add 2026-05-22 reset, calendar jump buttons, and 1x/10x/100x speed presets.
 - Add click-to-focus raycasting, smooth camera transition, and body profile panel.
 - Enable Three.js shadow maps and improve sun/Saturn visuals.
+- Add Codex/Claude comparison report page and desktop/mobile report verification.

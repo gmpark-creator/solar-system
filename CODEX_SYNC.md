@@ -12,14 +12,16 @@
 - Step 4 implemented in the Codex lane.
 - Stack: HTML5 + JavaScript + Three.js CDN, with local Node static server for development.
 - Entry point: `index.html`
-- App code: `src/app.js`, `src/styles.css`
-- Verification: `npm run verify` passed for desktop and mobile viewports.
+- Report page: `report.html`
+- App code: `src/app.js`, `src/styles.css`, `src/report-data.js`, `src/report.js`, `src/report.css`
+- Verification: `npm run verify` covers simulator and report pages for desktop and mobile viewports.
 - Implemented bodies: Sun, Mercury, Venus, Earth, Moon, Mars, Jupiter, Saturn, Uranus, Neptune.
 - Current focus UI supports Sun, Moon, and all major planets.
 - Time navigation UI supports direct local datetime input, ±1 day steps, ±2 year slider, and live reset.
 - Baseline reset date is `2026-05-22`.
 - Added time jump buttons, speed presets, click-to-focus, smooth camera focus, and object information panel.
 - Visual upgrades: shadow map enabled, textured Saturn rings, persistent billboard labels, and strengthened sun glow.
+- Codex-style comparison dashboard added from the Claude README/GitHub Pages report baseline.
 
 ## Peer Review Setup
 

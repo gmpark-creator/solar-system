@@ -116,6 +116,25 @@ input[type="range"] {
   font-weight: 600;
 }
 
+.hud-report-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 0 9px;
+  border: 1px solid rgba(166, 184, 216, 0.24);
+  border-radius: 8px;
+  background: rgba(15, 24, 39, 0.78);
+  color: #dce8f8;
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.hud-report-link:hover {
+  border-color: rgba(255, 202, 103, 0.72);
+  background: rgba(33, 45, 64, 0.92);
+}
+
 .hud dl {
   display: grid;
   gap: 5px;
@@ -382,7 +401,7 @@ input[type="range"] {
   }
 
   .timebar {
-    bottom: 132px;
+    bottom: 202px;
     gap: 6px;
     width: calc(100vw - 20px);
   }

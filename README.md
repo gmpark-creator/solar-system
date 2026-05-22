@@ -52,6 +52,12 @@ npm run serve
 http://127.0.0.1:5178/
 ```
 
+Codex/Claude 비교 보고서는 같은 서버에서 엽니다.
+
+```text
+http://127.0.0.1:5178/report.html
+```
+
 검증은 다음 명령으로 실행합니다. 로컬 서버가 먼저 떠 있어야 합니다.
 
 ```powershell
@@ -74,4 +80,5 @@ npm run verify
 - 행성 클릭 포커스, 부드러운 카메라 이동, 천체 정보 패널
 - 시각화 스케일과 실제 비율 스케일 토글
 - 태양 글로우, 토성 고리 텍스처, Three.js shadow map 설정
-- 데스크톱/모바일 Playwright 캔버스 렌더 검증
+- Claude README/GitHub Pages 기준 비교 보고서 페이지
+- 데스크톱/모바일 Playwright 캔버스 렌더 및 보고서 페이지 검증
