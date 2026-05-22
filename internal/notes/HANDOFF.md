@@ -81,3 +81,27 @@ npm run verify
 ```
 
 Latest verification passed on desktop `1440x900` and mobile `390x844`; screenshots were written as `step3-desktop.png` and `step3-mobile.png` under `internal/notes/verification/`.
+
+## Step 4 Codex Implementation
+
+Implemented:
+
+- Baseline simulation start/reset date: `2026-05-22`.
+- `YYYY-MM-DD` simulation date readout.
+- Calendar jump buttons: ±1 week, ±1 month, ±3 months, ±6 months, ±1 year.
+- 1x, 10x, 100x speed presets.
+- Click-to-focus raycasting for Sun, Earth, Moon, and all major planets.
+- Smooth camera transition to focused bodies.
+- HTML/CSS information panel with body diameter, orbit period, rotation period, and summary.
+- Overview return button.
+- Persistent billboard labels.
+- Shadow map configuration and cast/receive shadow flags for solid bodies.
+- Textured Saturn ring material and strengthened sun glow.
+
+Verification command:
+
+```powershell
+npm run verify
+```
+
+Latest verification passed on desktop `1440x900` and mobile `390x844`; screenshots were written as `step4-desktop.png` and `step4-mobile.png` under `internal/notes/verification/`.

@@ -171,7 +171,7 @@ input[type="range"] {
 .timebar {
   position: fixed;
   left: 50%;
-  bottom: 76px;
+  bottom: 94px;
   z-index: 4;
   display: flex;
   flex-wrap: wrap;
@@ -186,6 +186,110 @@ input[type="range"] {
   transform: translateX(-50%);
   backdrop-filter: blur(12px);
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.34);
+}
+
+.time-jumps,
+.speed-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.time-jumps {
+  flex: 1 1 100%;
+  justify-content: center;
+}
+
+.time-jumps button {
+  min-width: 54px;
+  height: 30px;
+  padding: 0 9px;
+  font-size: 12px;
+}
+
+#time-reset {
+  min-width: 132px;
+  color: var(--gold);
+}
+
+.speed-presets button {
+  min-width: 46px;
+  height: 36px;
+}
+
+.info-panel {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 5;
+  width: min(330px, calc(100vw - 28px));
+  padding: 16px;
+  border: 1px solid rgba(255, 202, 103, 0.28);
+  border-radius: 8px;
+  background: rgba(7, 11, 20, 0.82);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.36);
+}
+
+.info-panel[hidden] {
+  display: none;
+}
+
+.overview-button {
+  float: right;
+  min-width: 82px;
+  height: 32px;
+  color: var(--gold);
+}
+
+.info-kicker {
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.info-panel h2 {
+  margin: 0 0 12px;
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.info-panel dl {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.info-panel dl div {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.info-panel dt,
+.info-panel dd {
+  margin: 0;
+  font-size: 12px;
+}
+
+.info-panel dt {
+  color: var(--muted);
+}
+
+.info-panel dd {
+  color: var(--text);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.info-panel p {
+  clear: both;
+  margin: 0;
+  color: #dbe5f6;
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .loading {
@@ -278,8 +382,44 @@ input[type="range"] {
   }
 
   .timebar {
-    bottom: 116px;
+    bottom: 132px;
     gap: 6px;
     width: calc(100vw - 20px);
+  }
+
+  .time-jumps {
+    max-height: 70px;
+    overflow-y: auto;
+    justify-content: flex-start;
+  }
+
+  .time-jumps button {
+    flex: 1 1 54px;
+  }
+
+  #time-reset {
+    flex-basis: 100%;
+  }
+
+  .speed-presets {
+    flex: 1 1 100%;
+  }
+
+  .speed-presets button {
+    flex: 1 1 30%;
+  }
+
+  .info-panel {
+    top: auto;
+    right: 10px;
+    bottom: 232px;
+    width: calc(100vw - 20px);
+    max-height: 34vh;
+    overflow: auto;
+    padding: 12px;
+  }
+
+  .info-panel h2 {
+    font-size: 19px;
   }
 }

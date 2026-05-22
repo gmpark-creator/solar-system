@@ -10,6 +10,7 @@ const SUN_RADIUS_KM = 696_340.0;
 const MOON_RADIUS_KM = 1_737.4;
 const OBLIQUITY_DEG = 23.4392911;
 const EPOCH_2000_JAN_0 = Date.UTC(1999, 11, 31, 0, 0, 0);
+const BASE_SIMULATION_MS = new Date(2026, 4, 22, 0, 0, 0).getTime();
 
 const SCALES = {
   visual: {
@@ -34,7 +35,7 @@ const SCALES = {
   },
 };
 
-const SPEEDS = [-604800, -86400, -21600, -3600, -600, -60, -10, -1, 1, 10, 60, 600, 3600, 21600, 86400, 604800];
+const SPEEDS = [-604800, -86400, -21600, -3600, -600, -60, -10, -1, 1, 10, 60, 100, 600, 3600, 21600, 86400, 604800];
 const TIMELINE_SPAN_DAYS = 730;
 const TIMELINE_RECENTER_THRESHOLD_DAYS = 700;
 
@@ -186,7 +187,91 @@ const PLANET_DEFS = [
 
 const PLANET_BY_ID = Object.fromEntries(PLANET_DEFS.map((planet) => [planet.id, planet]));
 
+const BODY_PROFILES = {
+  sun: {
+    name: 'Sun',
+    type: 'Star Profile',
+    diameterKm: 1_392_680,
+    orbit: '태양계 중심',
+    rotation: '약 25일',
+    summary: '태양계 질량의 대부분을 차지하는 항성입니다. 장면에서는 자체 발광 재질과 글로우로 표현됩니다.',
+  },
+  mercury: {
+    name: 'Mercury',
+    type: 'Planet Profile',
+    diameterKm: 4_879,
+    orbit: '87.97일',
+    rotation: '58.6일',
+    summary: '태양에 가장 가까운 암석 행성입니다. 빠른 공전과 큰 궤도 이심률을 가집니다.',
+  },
+  venus: {
+    name: 'Venus',
+    type: 'Planet Profile',
+    diameterKm: 12_104,
+    orbit: '224.7일',
+    rotation: '243일 역행',
+    summary: '두꺼운 대기와 높은 반사율을 가진 행성입니다. 자전 방향이 대부분 행성과 반대입니다.',
+  },
+  earth: {
+    name: 'Earth',
+    type: 'Planet Profile',
+    diameterKm: 12_742,
+    orbit: '365.26일',
+    rotation: '23.93시간',
+    summary: '달과의 상대 위치를 별도로 계산하는 기준 행성입니다. 자전각은 Julian Date 기반 GMST로 표시됩니다.',
+  },
+  moon: {
+    name: 'Moon',
+    type: 'Satellite Profile',
+    diameterKm: 3_475,
+    orbit: '27.32일',
+    rotation: '동주기 자전',
+    summary: '지구의 위성입니다. 달의 지구 상대 위치는 조석 계산 확장을 고려해 별도 천체력으로 계산합니다.',
+  },
+  mars: {
+    name: 'Mars',
+    type: 'Planet Profile',
+    diameterKm: 6_779,
+    orbit: '686.98일',
+    rotation: '24.62시간',
+    summary: '붉은 표면과 지구와 비슷한 하루 길이를 가진 암석 행성입니다.',
+  },
+  jupiter: {
+    name: 'Jupiter',
+    type: 'Planet Profile',
+    diameterKm: 139_822,
+    orbit: '11.86년',
+    rotation: '9.93시간',
+    summary: '태양계에서 가장 큰 행성입니다. 빠른 자전과 줄무늬 대기 패턴을 시각화했습니다.',
+  },
+  saturn: {
+    name: 'Saturn',
+    type: 'Planet Profile',
+    diameterKm: 116_464,
+    orbit: '29.46년',
+    rotation: '10.66시간',
+    summary: '넓은 고리계를 가진 가스 행성입니다. 고리는 반투명 텍스처가 입혀진 별도 매시로 표현됩니다.',
+  },
+  uranus: {
+    name: 'Uranus',
+    type: 'Planet Profile',
+    diameterKm: 50_724,
+    orbit: '84.0년',
+    rotation: '17.24시간 역행',
+    summary: '자전축이 크게 기울어진 얼음 거대 행성입니다.',
+  },
+  neptune: {
+    name: 'Neptune',
+    type: 'Planet Profile',
+    diameterKm: 49_244,
+    orbit: '164.8년',
+    rotation: '16.11시간',
+    summary: '태양계의 가장 바깥쪽 주요 행성입니다. 긴 공전 주기와 푸른 색감을 가집니다.',
+  },
+};
+
 const readouts = {
+  date: document.getElementById('readout-date'),
   local: document.getElementById('readout-local'),
   utc: document.getElementById('readout-utc'),
   speed: document.getElementById('readout-speed'),
@@ -204,6 +289,7 @@ const buttons = {
   timeBackDay: document.getElementById('time-back-day'),
   timeForwardDay: document.getElementById('time-forward-day'),
   timeLive: document.getElementById('time-live'),
+  timeReset: document.getElementById('time-reset'),
   focusEarth: document.getElementById('focus-earth'),
   focusSun: document.getElementById('focus-sun'),
   focusTarget: document.getElementById('focus-target'),
@@ -215,6 +301,20 @@ const timeControls = {
   input: document.getElementById('time-input'),
   range: document.getElementById('time-range'),
 };
+
+const infoPanel = {
+  root: document.getElementById('info-panel'),
+  overview: document.getElementById('overview'),
+  kicker: document.getElementById('info-kicker'),
+  title: document.getElementById('info-title'),
+  diameter: document.getElementById('info-diameter'),
+  orbit: document.getElementById('info-orbit'),
+  rotation: document.getElementById('info-rotation'),
+  summary: document.getElementById('info-summary'),
+};
+
+const jumpButtons = Array.from(document.querySelectorAll('[data-time-jump]'));
+const speedPresetButtons = Array.from(document.querySelectorAll('[data-speed]'));
 
 const loading = document.getElementById('loading');
 const localFormatter = new Intl.DateTimeFormat('ko-KR', {
@@ -602,6 +702,23 @@ function makeGlowTexture() {
   });
 }
 
+function makeRingTexture() {
+  return canvasTexture(512, 64, (ctx, width, height) => {
+    const gradient = ctx.createLinearGradient(0, 0, width, 0);
+    gradient.addColorStop(0, 'rgba(222,198,142,0)');
+    gradient.addColorStop(0.14, 'rgba(222,198,142,0.28)');
+    gradient.addColorStop(0.22, 'rgba(246,230,184,0.74)');
+    gradient.addColorStop(0.36, 'rgba(134,108,76,0.38)');
+    gradient.addColorStop(0.44, 'rgba(40,31,22,0.08)');
+    gradient.addColorStop(0.53, 'rgba(236,216,165,0.76)');
+    gradient.addColorStop(0.72, 'rgba(171,139,91,0.48)');
+    gradient.addColorStop(0.92, 'rgba(246,230,184,0.24)');
+    gradient.addColorStop(1, 'rgba(222,198,142,0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+  });
+}
+
 function makeLabelTexture(text) {
   return canvasTexture(256, 96, (ctx, width, height) => {
     ctx.clearRect(0, 0, width, height);
@@ -693,6 +810,8 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.08;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.getElementById('app').prepend(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -709,6 +828,11 @@ controls.rotateSpeed = 0.74;
 controls.zoomSpeed = 0.86;
 
 const sunLight = new THREE.PointLight(0xfff0d5, 3.6, 0, 0);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.set(2048, 2048);
+sunLight.shadow.bias = -0.00008;
+sunLight.shadow.camera.near = 0.1;
+sunLight.shadow.camera.far = 4000;
 scene.add(sunLight);
 scene.add(new THREE.AmbientLight(0x4d5872, 0.28));
 scene.add(makeStarField());
@@ -717,6 +841,7 @@ const sunMesh = new THREE.Mesh(
   new THREE.SphereGeometry(1, 96, 64),
   new THREE.MeshBasicMaterial({ map: makeSunTexture() }),
 );
+sunMesh.userData.bodyId = 'sun';
 scene.add(sunMesh);
 
 const sunGlow = new THREE.Sprite(new THREE.SpriteMaterial({
@@ -744,6 +869,9 @@ const earthMesh = new THREE.Mesh(
     emissiveIntensity: 0.08,
   }),
 );
+earthMesh.castShadow = true;
+earthMesh.receiveShadow = true;
+earthMesh.userData.bodyId = 'earth';
 earthAxis.add(earthMesh);
 
 const earthAtmosphere = new THREE.Mesh(
@@ -773,6 +901,9 @@ const moonMesh = new THREE.Mesh(
     metalness: 0,
   }),
 );
+moonMesh.castShadow = true;
+moonMesh.receiveShadow = true;
+moonMesh.userData.bodyId = 'moon';
 scene.add(moonMesh);
 
 const planetGeometry = new THREE.SphereGeometry(1, 64, 48);
@@ -787,7 +918,10 @@ const planetMeshes = Object.fromEntries(PLANET_DEFS.map((planet) => {
       emissiveIntensity: 0.18,
     }),
   );
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
   mesh.userData.planet = planet;
+  mesh.userData.bodyId = planet.id;
   scene.add(mesh);
   return [planet.id, mesh];
 }));
@@ -795,14 +929,17 @@ const planetMeshes = Object.fromEntries(PLANET_DEFS.map((planet) => {
 const saturnRing = new THREE.Mesh(
   new THREE.RingGeometry(1.38, 2.18, 128),
   new THREE.MeshBasicMaterial({
-    color: 0xd8c391,
+    map: makeRingTexture(),
+    color: 0xffffff,
     transparent: true,
-    opacity: 0.52,
+    opacity: 0.78,
     side: THREE.DoubleSide,
     depthWrite: false,
   }),
 );
 saturnRing.rotation.set(64 * DEG, 0, 18 * DEG);
+saturnRing.castShadow = true;
+saturnRing.receiveShadow = true;
 scene.add(saturnRing);
 
 const earthOrbit = makeOrbitLine(0x4e92d8, 0.42);
@@ -849,12 +986,17 @@ const focusMarker = new THREE.Mesh(markerGeometry, new THREE.MeshBasicMaterial({
 }));
 scene.add(earthMarker, moonMarker, focusMarker);
 
+const clickableBodies = [sunMesh, earthMesh, moonMesh, ...Object.values(planetMeshes)];
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+const pointerDown = new THREE.Vector2();
+
 let scaleMode = 'visual';
 let focusMode = 'earth';
 let orbitsVisible = true;
 let paused = false;
 let speedIndex = SPEEDS.indexOf(1);
-let simulationMs = Date.now();
+let simulationMs = BASE_SIMULATION_MS;
 let timelineAnchorMs = simulationMs;
 let previousAnimationMs = performance.now();
 let previousFocus = new THREE.Vector3();
@@ -863,6 +1005,7 @@ let lastMoonOrbitBucket = Number.NaN;
 let lastSolarOrbitBucket = Number.NaN;
 let firstFrameRendered = false;
 let timeInputFocused = false;
+let cameraTween = null;
 
 function currentScale() {
   return SCALES[scaleMode];
@@ -872,6 +1015,10 @@ function localDateTimeValue(ms) {
   const date = new Date(ms);
   const localMs = ms - date.getTimezoneOffset() * 60000;
   return new Date(localMs).toISOString().slice(0, 19);
+}
+
+function localDateValue(ms) {
+  return localDateTimeValue(ms).slice(0, 10);
 }
 
 function parseLocalDateTime(value) {
@@ -904,6 +1051,7 @@ function setSimulationTime(ms, options = {}) {
   simulationMs = ms;
   if (options.recenter) recenterTimeline(ms);
   if (options.pause) paused = true;
+  if (options.resume) paused = false;
   setButtonStates();
   updateTimeControls();
   frameFocus();
@@ -917,6 +1065,27 @@ function jumpToLive() {
   setButtonStates();
   updateTimeControls();
   frameFocus();
+}
+
+function resetToBaseDate() {
+  setSimulationTime(BASE_SIMULATION_MS, { resume: true, recenter: true });
+}
+
+function shiftCalendar({ days = 0, months = 0, years = 0 }) {
+  const date = new Date(simulationMs);
+  if (years) date.setFullYear(date.getFullYear() + years);
+  if (months) date.setMonth(date.getMonth() + months);
+  if (days) date.setDate(date.getDate() + days);
+  setSimulationTime(date.getTime(), { resume: true, recenter: true });
+}
+
+function applyJumpToken(token) {
+  const sign = token.startsWith('-') ? -1 : 1;
+  const amount = Number(token.slice(1, -1));
+  const unit = token.slice(-1);
+  if (unit === 'd') shiftCalendar({ days: sign * amount });
+  if (unit === 'm') shiftCalendar({ months: sign * amount });
+  if (unit === 'y') shiftCalendar({ years: sign * amount });
 }
 
 function earthPositionUnits(state, scale) {
@@ -1040,36 +1209,67 @@ function setButtonStates() {
   buttons.focusSun.classList.toggle('is-active', focusMode === 'sun');
   buttons.toggleOrbits.classList.toggle('is-active', orbitsVisible);
   buttons.focusTarget.value = focusMode;
+  for (const button of speedPresetButtons) {
+    button.classList.toggle('is-active', SPEEDS[speedIndex] === Number(button.dataset.speed));
+  }
 }
 
-function frameFocus() {
+function cameraFrameFor(bodyId, state, scale) {
+  const targetPosition = bodyPositionUnits(bodyId, state, scale);
+  const targetRadius = bodyRadiusUnits(bodyId, scale);
+
+  if (bodyId === 'sun') {
+    const distance = scale.au * 38;
+    return {
+      target: new THREE.Vector3(0, 0, 0),
+      position: new THREE.Vector3(distance * 0.28, distance * 0.42, distance),
+    };
+  }
+
+  const moonOffset = moonOffsetUnits(state, scale);
+  const localContext = bodyId === 'earth' ? moonOffset.length() : scale.au * 0.08;
+  const distance = Math.max(targetRadius * 9, localContext, 6);
+  const lift = bodyId === 'moon' ? distance * 0.3 : distance * 0.48;
+  return {
+    target: targetPosition,
+    position: targetPosition.clone().add(new THREE.Vector3(distance * 0.7, lift, distance * 1.42)),
+  };
+}
+
+function frameFocus(options = {}) {
   const state = computeState(new Date(simulationMs));
   const scale = currentScale();
   const earthPosition = earthPositionUnits(state, scale);
   const moonOffset = moonOffsetUnits(state, scale);
   const moonPosition = earthPosition.clone().add(moonOffset);
-  const targetPosition = bodyPositionUnits(focusMode, state, scale);
-  const targetRadius = bodyRadiusUnits(focusMode, scale);
+  const frame = cameraFrameFor(focusMode, state, scale);
 
-  if (focusMode === 'sun') {
-    const distance = scale.au * 38;
-    controls.target.set(0, 0, 0);
-    camera.position.set(distance * 0.28, distance * 0.42, distance);
-    previousFocus.set(0, 0, 0);
+  if (options.smooth) {
+    cameraTween = {
+      startTime: performance.now(),
+      duration: 950,
+      fromPosition: camera.position.clone(),
+      fromTarget: controls.target.clone(),
+      toPosition: frame.position.clone(),
+      toTarget: frame.target.clone(),
+    };
   } else {
-    const localContext = focusMode === 'earth' ? moonOffset.length() : scale.au * 0.08;
-    const distance = Math.max(targetRadius * 9, localContext, 6);
-    controls.target.copy(targetPosition);
-    camera.position.copy(targetPosition).add(new THREE.Vector3(distance * 0.7, distance * 0.48, distance * 1.42));
-    previousFocus.copy(targetPosition);
+    cameraTween = null;
+    controls.target.copy(frame.target);
+    camera.position.copy(frame.position);
+    previousFocus.copy(frame.target);
+    camera.lookAt(controls.target);
   }
 
-  camera.lookAt(controls.target);
   moonOrbit.position.copy(earthPosition);
   moonMesh.position.copy(moonPosition);
 }
 
-function updateScene(state) {
+function easeOutCubic(value) {
+  return 1 - Math.pow(1 - value, 3);
+}
+
+function updateScene(state, now) {
   const scale = currentScale();
   const earthPosition = earthPositionUnits(state, scale);
   const moonOffset = moonOffsetUnits(state, scale);
@@ -1104,11 +1304,11 @@ function updateScene(state) {
   labels.sun.position.set(0, scale.sunRadius + 4, 0);
   labels.earth.position.copy(earthPosition).add(new THREE.Vector3(0, labelLift * 2.9 + 1.5, 0));
   labels.moon.position.copy(moonPosition).add(new THREE.Vector3(0, Math.max(scale.moonRadius * 3.8, 1.1), 0));
-  labels.sun.visible = focusMode !== 'sun';
-  labels.earth.visible = focusMode !== 'earth';
-  labels.moon.visible = focusMode !== 'moon';
+  labels.sun.visible = true;
+  labels.earth.visible = true;
+  labels.moon.visible = true;
   for (const planet of PLANET_DEFS) {
-    planetLabels[planet.id].visible = focusMode !== planet.id;
+    planetLabels[planet.id].visible = true;
   }
 
   earthMarker.position.copy(earthPosition);
@@ -1120,10 +1320,24 @@ function updateScene(state) {
   moonMarker.lookAt(camera.position);
   focusMarker.lookAt(camera.position);
 
-  const delta = focusTarget.clone().sub(previousFocus);
-  camera.position.add(delta);
-  controls.target.add(delta);
-  previousFocus.copy(focusTarget);
+  if (cameraTween) {
+    const t = Math.min(1, (now - cameraTween.startTime) / cameraTween.duration);
+    const eased = easeOutCubic(t);
+    camera.position.lerpVectors(cameraTween.fromPosition, cameraTween.toPosition, eased);
+    controls.target.lerpVectors(cameraTween.fromTarget, cameraTween.toTarget, eased);
+    if (t >= 1) {
+      cameraTween = null;
+      const currentFrame = cameraFrameFor(focusMode, state, scale);
+      camera.position.copy(currentFrame.position);
+      controls.target.copy(currentFrame.target);
+      previousFocus.copy(currentFrame.target);
+    }
+  } else {
+    const delta = focusTarget.clone().sub(previousFocus);
+    camera.position.add(delta);
+    controls.target.add(delta);
+    previousFocus.copy(focusTarget);
+  }
 
   rebuildOrbits(state.date);
 }
@@ -1132,7 +1346,7 @@ function speedLabel(value) {
   if (value === 1) return '1x';
   const sign = value < 0 ? '-' : '';
   const abs = Math.abs(value);
-  if (abs < 60) return `${sign}${abs}x`;
+  if ([1, 10, 100].includes(abs) || abs < 60) return `${sign}${abs}x`;
   if (abs < 3600) return `${sign}${abs / 60}분/s`;
   if (abs < 86400) return `${sign}${abs / 3600}시간/s`;
   if (abs < 604800) return `${sign}${abs / 86400}일/s`;
@@ -1143,9 +1357,45 @@ function formatKm(value) {
   return `${Math.round(value).toLocaleString('ko-KR')} km`;
 }
 
+function formatDiameter(value) {
+  return `${Math.round(value).toLocaleString('ko-KR')} km`;
+}
+
+function showInfoPanel(bodyId) {
+  const profile = BODY_PROFILES[bodyId];
+  if (!profile) {
+    infoPanel.root.hidden = true;
+    return;
+  }
+
+  infoPanel.root.hidden = false;
+  infoPanel.kicker.textContent = profile.type;
+  infoPanel.title.textContent = profile.name;
+  infoPanel.diameter.textContent = formatDiameter(profile.diameterKm);
+  infoPanel.orbit.textContent = profile.orbit;
+  infoPanel.rotation.textContent = profile.rotation;
+  infoPanel.summary.textContent = profile.summary;
+}
+
+function selectBodyFocus(bodyId, options = {}) {
+  if (!BODY_PROFILES[bodyId]) return;
+  focusMode = bodyId;
+  setButtonStates();
+  showInfoPanel(options.showInfo === false ? null : bodyId);
+  frameFocus({ smooth: options.smooth === true });
+}
+
+function returnToOverview() {
+  focusMode = 'sun';
+  setButtonStates();
+  showInfoPanel(null);
+  frameFocus({ smooth: true });
+}
+
 function updateHud(state, now) {
   if (now - lastHudUpdate < 120) return;
   lastHudUpdate = now;
+  readouts.date.textContent = localDateValue(state.date.getTime());
   readouts.local.textContent = localFormatter.format(state.date);
   readouts.utc.textContent = state.date.toISOString().replace('T', ' ').slice(0, 19);
   readouts.speed.textContent = paused ? '정지' : speedLabel(SPEEDS[speedIndex]);
@@ -1158,11 +1408,23 @@ function updateHud(state, now) {
 
 function changeSpeed(delta) {
   speedIndex = Math.max(0, Math.min(SPEEDS.length - 1, speedIndex + delta));
+  setButtonStates();
+  updateTimeControls();
+}
+
+function setSpeedValue(value) {
+  const index = SPEEDS.indexOf(value);
+  if (index === -1) return;
+  speedIndex = index;
+  setButtonStates();
   updateTimeControls();
 }
 
 buttons.speedDown.addEventListener('click', () => changeSpeed(-1));
 buttons.speedUp.addEventListener('click', () => changeSpeed(1));
+for (const button of speedPresetButtons) {
+  button.addEventListener('click', () => setSpeedValue(Number(button.dataset.speed)));
+}
 buttons.pause.addEventListener('click', () => {
   paused = !paused;
   setButtonStates();
@@ -1175,11 +1437,15 @@ buttons.timeLive.addEventListener('click', () => {
   jumpToLive();
 });
 buttons.timeBackDay.addEventListener('click', () => {
-  setSimulationTime(simulationMs - DAY_MS, { pause: true });
+  shiftCalendar({ days: -1 });
 });
 buttons.timeForwardDay.addEventListener('click', () => {
-  setSimulationTime(simulationMs + DAY_MS, { pause: true });
+  shiftCalendar({ days: 1 });
 });
+buttons.timeReset.addEventListener('click', () => resetToBaseDate());
+for (const button of jumpButtons) {
+  button.addEventListener('click', () => applyJumpToken(button.dataset.timeJump));
+}
 timeControls.input.addEventListener('focus', () => {
   timeInputFocused = true;
 });
@@ -1198,19 +1464,13 @@ timeControls.range.addEventListener('input', () => {
   setSimulationTime(timelineAnchorMs + offsetDays * DAY_MS, { pause: true });
 });
 buttons.focusEarth.addEventListener('click', () => {
-  focusMode = 'earth';
-  setButtonStates();
-  frameFocus();
+  selectBodyFocus('earth', { smooth: true, showInfo: false });
 });
 buttons.focusSun.addEventListener('click', () => {
-  focusMode = 'sun';
-  setButtonStates();
-  frameFocus();
+  selectBodyFocus('sun', { smooth: true, showInfo: false });
 });
 buttons.focusTarget.addEventListener('change', () => {
-  focusMode = buttons.focusTarget.value;
-  setButtonStates();
-  frameFocus();
+  selectBodyFocus(buttons.focusTarget.value, { smooth: true, showInfo: false });
 });
 buttons.scaleMode.addEventListener('click', () => {
   scaleMode = scaleMode === 'visual' ? 'real' : 'visual';
@@ -1220,6 +1480,29 @@ buttons.scaleMode.addEventListener('click', () => {
 buttons.toggleOrbits.addEventListener('click', () => {
   orbitsVisible = !orbitsVisible;
   setButtonStates();
+});
+infoPanel.overview.addEventListener('click', () => returnToOverview());
+
+function setPointerFromEvent(event) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+}
+
+renderer.domElement.addEventListener('pointerdown', (event) => {
+  pointerDown.set(event.clientX, event.clientY);
+});
+
+renderer.domElement.addEventListener('pointerup', (event) => {
+  const moved = pointerDown.distanceTo(new THREE.Vector2(event.clientX, event.clientY));
+  if (moved > 6) return;
+  setPointerFromEvent(event);
+  raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster.intersectObjects(clickableBodies, false)[0];
+  const bodyId = hit?.object?.userData?.bodyId;
+  if (bodyId) {
+    selectBodyFocus(bodyId, { smooth: true });
+  }
 });
 
 window.addEventListener('keydown', (event) => {
@@ -1257,7 +1540,7 @@ function animate(now) {
   }
 
   const state = computeState(new Date(simulationMs));
-  updateScene(state);
+  updateScene(state, now);
   controls.update();
   renderer.render(scene, camera);
   updateHud(state, now);
@@ -1280,9 +1563,24 @@ window.solarProject = {
   getSimulationDate() {
     return new Date(simulationMs).toISOString();
   },
+  getSimulationDateLabel() {
+    return localDateValue(simulationMs);
+  },
   setSimulationDate(value) {
     const nextMs = value instanceof Date ? value.getTime() : new Date(value).getTime();
     setSimulationTime(nextMs, { pause: true, recenter: true });
+  },
+  getBodyScreenPosition(bodyId) {
+    const state = computeState(new Date(simulationMs));
+    const position = bodyPositionUnits(bodyId, state, currentScale()).project(camera);
+    return {
+      x: (position.x * 0.5 + 0.5) * window.innerWidth,
+      y: (-position.y * 0.5 + 0.5) * window.innerHeight,
+      visible: position.z >= -1 && position.z <= 1,
+    };
+  },
+  focusBody(bodyId) {
+    selectBodyFocus(bodyId, { smooth: true });
   },
   setScaleMode(mode) {
     if (!SCALES[mode]) return;
@@ -1291,9 +1589,6 @@ window.solarProject = {
     frameFocus();
   },
   setFocusMode(mode) {
-    if (!['sun', 'earth', 'moon', ...PLANET_DEFS.map((planet) => planet.id)].includes(mode)) return;
-    focusMode = mode;
-    setButtonStates();
-    frameFocus();
+    selectBodyFocus(mode, { smooth: true, showInfo: false });
   },
 };

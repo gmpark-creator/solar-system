@@ -32,7 +32,7 @@ async function inspectViewport(browser, viewport) {
   await page.waitForFunction(() => window.__SOLAR_READY === true, null, { timeout: 45000 });
   await page.waitForTimeout(600);
 
-  const screenshotPath = path.join('internal', 'notes', 'verification', `step3-${viewport.name}.png`);
+  const screenshotPath = path.join('internal', 'notes', 'verification', `step4-${viewport.name}.png`);
   await page.screenshot({ path: screenshotPath, fullPage: false });
 
   const metrics = await page.evaluate(() => {
@@ -69,6 +69,9 @@ async function inspectViewport(browser, viewport) {
       focusOptionCount: document.querySelectorAll('#focus-target option').length,
       hasTimeInput: document.getElementById('time-input') instanceof HTMLInputElement,
       hasTimeRange: document.getElementById('time-range') instanceof HTMLInputElement,
+      dateLabel: document.getElementById('readout-date')?.textContent,
+      jumpButtonCount: document.querySelectorAll('[data-time-jump]').length,
+      speedPresetCount: document.querySelectorAll('[data-speed]').length,
       hud: hud ? { width: hud.width, height: hud.height, top: hud.top, left: hud.left } : null,
       toolbar: toolbar ? { width: toolbar.width, height: toolbar.height, bottom: innerHeight - toolbar.bottom, left: toolbar.left } : null,
       timebar: timebar ? { width: timebar.width, height: timebar.height, bottom: innerHeight - timebar.bottom, left: timebar.left } : null,
@@ -79,8 +82,19 @@ async function inspectViewport(browser, viewport) {
   await page.waitForTimeout(180);
   await page.click('#scale-mode');
   await page.waitForTimeout(180);
+  await page.click('[data-speed="100"]');
+  await page.waitForTimeout(180);
+  const speedPresetText = await page.evaluate(() => document.getElementById('readout-speed').textContent);
+  await page.click('[data-speed="1"]');
+  await page.waitForTimeout(120);
   await page.selectOption('#focus-target', 'neptune');
   await page.waitForTimeout(180);
+  await page.click('#time-reset');
+  await page.waitForTimeout(180);
+  const resetDateLabel = await page.evaluate(() => window.solarProject.getSimulationDateLabel());
+  await page.click('[data-time-jump="+7d"]');
+  await page.waitForTimeout(180);
+  const weekForwardLabel = await page.evaluate(() => window.solarProject.getSimulationDateLabel());
   await page.evaluate(() => {
     const input = document.getElementById('time-input');
     input.value = '2026-03-04T05:06:07';
@@ -98,15 +112,45 @@ async function inspectViewport(browser, viewport) {
   });
   await page.waitForTimeout(180);
   const rangeIso = await page.evaluate(() => window.solarProject.getSimulationDate());
+  await page.evaluate(() => window.solarProject.setScaleMode('visual'));
+  await page.evaluate(() => window.solarProject.setFocusMode('earth'));
+  await page.waitForTimeout(1100);
+  const earthScreen = await page.evaluate(() => window.solarProject.getBodyScreenPosition('earth'));
+  await page.evaluate(() => {
+    document.getElementById('info-panel').hidden = true;
+  });
+  if (earthScreen.visible) {
+    await page.mouse.click(earthScreen.x, earthScreen.y);
+  } else {
+    await page.evaluate(() => window.solarProject.focusBody('earth'));
+  }
+  await page.waitForTimeout(1100);
+  const focusPanel = await page.evaluate(() => ({
+    title: document.getElementById('info-title').textContent,
+    hidden: document.getElementById('info-panel').hidden,
+    focusValue: document.getElementById('focus-target').value,
+  }));
+  await page.click('#overview');
+  await page.waitForTimeout(700);
+  const overviewState = await page.evaluate(() => ({
+    hidden: document.getElementById('info-panel').hidden,
+    focusValue: document.getElementById('focus-target').value,
+  }));
   await page.click('#time-live');
   await page.waitForTimeout(180);
   const interaction = await page.evaluate(() => ({
     focusValue: document.getElementById('focus-target').value,
     scaleText: document.getElementById('scale-mode').textContent,
+    liveSpeedText: document.getElementById('readout-speed').textContent,
     inputValue: document.getElementById('time-input').value,
     liveDeltaMs: Math.abs(Date.parse(window.solarProject.getSimulationDate()) - Date.now()),
     ready: window.__SOLAR_READY === true,
   }));
+  interaction.resetDateLabel = resetDateLabel;
+  interaction.weekForwardLabel = weekForwardLabel;
+  interaction.speedPresetText = speedPresetText;
+  interaction.focusPanel = focusPanel;
+  interaction.overviewState = overviewState;
   interaction.forwardDeltaMs = Date.parse(forwardIso) - Date.parse(inputIso);
   interaction.rangeDeltaMs = Date.parse(rangeIso) - Date.parse(inputIso);
 
@@ -130,13 +174,28 @@ function assertResult(result) {
   if (!result.metrics.hasTimeInput || !result.metrics.hasTimeRange) {
     throw new Error(`${result.viewport} expected date input and time range controls`);
   }
-  if (result.interaction.focusValue !== 'neptune' || result.interaction.scaleText !== 'True' || !result.interaction.ready) {
+  if (result.metrics.jumpButtonCount !== 10 || result.metrics.speedPresetCount !== 3) {
+    throw new Error(`${result.viewport} expected jump buttons and speed presets: ${JSON.stringify(result.metrics)}`);
+  }
+  if (result.interaction.focusValue !== 'sun' || result.interaction.scaleText !== 'Visual' || !result.interaction.ready) {
     throw new Error(`${result.viewport} focus/scale interaction failed: ${JSON.stringify(result.interaction)}`);
+  }
+  if (result.interaction.speedPresetText !== '100x' || result.interaction.liveSpeedText !== '1x') {
+    throw new Error(`${result.viewport} 100x speed preset failed: ${JSON.stringify(result.interaction)}`);
+  }
+  if (result.interaction.resetDateLabel !== '2026-05-22' || result.interaction.weekForwardLabel !== '2026-05-29') {
+    throw new Error(`${result.viewport} date jump/reset failed: ${JSON.stringify(result.interaction)}`);
+  }
+  if (result.interaction.focusPanel.hidden || result.interaction.focusPanel.title !== 'Earth' || result.interaction.focusPanel.focusValue !== 'earth') {
+    throw new Error(`${result.viewport} click focus/info panel failed: ${JSON.stringify(result.interaction.focusPanel)}`);
+  }
+  if (!result.interaction.overviewState.hidden || result.interaction.overviewState.focusValue !== 'sun') {
+    throw new Error(`${result.viewport} overview return failed: ${JSON.stringify(result.interaction.overviewState)}`);
   }
   if (Math.abs(result.interaction.forwardDeltaMs - 86400000) > 1000) {
     throw new Error(`${result.viewport} +1d interaction failed: ${JSON.stringify(result.interaction)}`);
   }
-  if (Math.abs(result.interaction.rangeDeltaMs - 172800000) > 1000) {
+  if (Math.abs(result.interaction.rangeDeltaMs - 259200000) > 1000) {
     throw new Error(`${result.viewport} range interaction failed: ${JSON.stringify(result.interaction)}`);
   }
   if (result.interaction.liveDeltaMs > 5000) {
