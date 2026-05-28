@@ -138,10 +138,18 @@
   <div class="th"><span>🌊 조석 · 물때</span><select id="tideLoc" title="조석 곡선 기준 지점"></select></div>
 
   <div class="lunar-vis" title="현재 시각의 달 위상 — 부산 관측자 시점 (북반구, SVG 매 tick 실시간 갱신)">
-    <svg viewBox="0 0 100 100" width="64" height="64" aria-hidden="true">
-      <circle cx="50" cy="50" r="48" fill="#0f1118"/>
-      <path id="moonLitPath" d="" fill="#ece3c8"/>
-      <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1"/>
+    <svg viewBox="0 0 100 100" width="72" height="72" aria-hidden="true">
+      <defs>
+        <clipPath id="moonClip"><circle cx="50" cy="50" r="48"/></clipPath>
+      </defs>
+      <!-- 실사 달 텍스처 (full bright base) — jsdelivr CDN, CORS 허용 -->
+      <image href="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/textures/planets/moon_1024.jpg"
+             x="2" y="2" width="96" height="96"
+             preserveAspectRatio="xMidYMid slice" clip-path="url(#moonClip)"/>
+      <!-- 위상에 따른 어두운 영역 mask (밝은 부분은 텍스처 그대로 노출) -->
+      <path id="moonDarkPath" d="" fill="rgba(6,8,16,0.94)" clip-path="url(#moonClip)"/>
+      <!-- 외곽 stroke -->
+      <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="1"/>
     </svg>
     <div class="lvis-meta">
       <div class="lvis-head">🌙 달 위상 · 부산 관측 (실시간)</div>
@@ -237,7 +245,8 @@ const LOCATIONS = [
   { name:'군산', lat:35.98, lon:126.56 }, { name:'목포', lat:34.79, lon:126.38 },
   { name:'부산', lat:35.10, lon:129.04 }, { name:'제주', lat:33.52, lon:126.53 }
 ];
-let curLoc = LOCATIONS[0];
+// 박사 standing: 부산 default (박사 본업 위치). selector value도 init 시 동기화.
+let curLoc = LOCATIONS.find(L => L.name === '부산') || LOCATIONS[0];
 
 // ===== 행성 데이터 (Keplerian 궤도요소 2000.0 기준 [기준값, 1일당 변화율] / 프로필) =====
 const PLANETS = [
@@ -359,23 +368,31 @@ function moonPhaseName(a) {
   for (const [lim,nm] of t) if (a<lim) return nm;
   return '삭(신월)';
 }
-// SVG path for moon phase disk — standard astronomical formula.
-// phaseDeg: 0=신월, 90=상현, 180=망, 270=하현. 북반구 부산 기준.
-// 외곽 반원(밝은 쪽 면) + terminator ellipse 호 두 단위.
-function moonPhaseSVGPath(phaseDeg, r) {
+// SVG path for moon dark region — 표준 천문학 공식. 실사 텍스처(아래) 위
+// 어두운 영역만 그려서 밝은 부분은 텍스처가 그대로 보이게.
+// phaseDeg: 0=신월(전체 어둠), 90=상현(왼쪽 어둠), 180=망(어둠 없음),
+//           270=하현(오른쪽 어둠), 360=신월. 북반구 부산 기준.
+function moonDarkPath(phaseDeg, r) {
   r = r || 48;
-  const k = (1 - cosd(phaseDeg)) / 2;        // illuminated fraction 0..1
-  const waxing = phaseDeg < 180;              // true=차오름(오른쪽 밝음)
-  const rx = Math.max(0.5, Math.abs(1 - 2*k) * r);
+  const c = cosd(phaseDeg);                  // cos α
+  const k = (1 - c) / 2;                     // illuminated fraction 0..1
+  const waxing = phaseDeg < 180;             // 차오름 = 오른쪽 밝음
+  const rx = Math.max(0.5, Math.abs(c) * r); // terminator ellipse x-radius
   const yT = 50 - r, yB = 50 + r;
-  const outerSweep = waxing ? 1 : 0;
-  const termSweep = waxing ? (k < 0.5 ? 1 : 0) : (k < 0.5 ? 0 : 1);
+  // 어두운 외곽 반원: waxing=왼쪽(sweep 0), waning=오른쪽(sweep 1)
+  const outerSweep = waxing ? 0 : 1;
+  // terminator sweep 표 (정확):
+  //   crescent waxing  → 1  (어두운 영역이 크고, terminator가 안쪽으로 살짝 침범)
+  //   gibbous  waxing  → 0  (어두운 영역이 작고, terminator가 밝은 쪽으로 깊이 들어감)
+  //   crescent waning  → 0
+  //   gibbous  waning  → 1
+  const termSweep = (k < 0.5) === waxing ? 1 : 0;
   return 'M 50 ' + yT + ' A ' + r + ' ' + r + ' 0 0 ' + outerSweep + ' 50 ' + yB +
          ' A ' + rx + ' ' + r + ' 0 0 ' + termSweep + ' 50 ' + yT + ' Z';
 }
 function updateBusanMoonPhase(st) {
-  const p = document.getElementById('moonLitPath');
-  if (p) p.setAttribute('d', moonPhaseSVGPath(st.phaseAngle));
+  const p = document.getElementById('moonDarkPath');
+  if (p) p.setAttribute('d', moonDarkPath(st.phaseAngle));
   const lbl = document.getElementById('moonPhaseLabel');
   if (lbl) lbl.textContent = st.phaseName;
   const det = document.getElementById('moonPhaseDetail');
@@ -981,6 +998,7 @@ focusSel.onchange = () => startFocus(focusSel.value,false);
 
 const tideLocSel=$('tideLoc');
 LOCATIONS.forEach((L,idx)=>{ const o=document.createElement('option'); o.value=idx; o.textContent=L.name; tideLocSel.appendChild(o); });
+tideLocSel.selectedIndex = Math.max(0, LOCATIONS.indexOf(curLoc));  // 부산 default 동기화
 tideLocSel.onchange = () => { curLoc=LOCATIONS[+tideLocSel.value]; drawTideCurve(true); };
 
 let paused = false;
