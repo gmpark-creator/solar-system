@@ -274,6 +274,7 @@
         <div class="mwPhaseName" id="mwPhase">—</div>
         <div class="mwRow"><span class="k">조명률</span><span class="v" id="mwIllum">—</span></div>
         <div class="mwRow"><span class="k">위상각</span><span class="v" id="mwAngle">—</span></div>
+        <div class="mwRow"><span class="k">고도·방위</span><span class="v" id="mwAltAz">—</span></div>
         <div class="mwRow"><span class="k">달 나이</span><span class="v" id="mwAge">—</span></div>
         <div class="mwRow"><span class="k">관측 시각</span><span class="v" id="mwTime">—</span></div>
       </div>
@@ -557,6 +558,7 @@ for (const S of STAR_SYSTEMS) {
 
 // ===== 천문 계산 =====
 const rev = x => { x%=360; return x<0?x+360:x; };
+const signedDeg = x => { x=rev(x); return x>180?x-360:x; };
 const sind = x => Math.sin(x*DEG), cosd = x => Math.cos(x*DEG);
 const atan2d = (y,x) => Math.atan2(y,x)*RAD;
 const P2 = c => (3*c*c-1)/2;
@@ -598,7 +600,7 @@ function moonPosition(d, sun) {
        -0.035*sind(Dm)-0.031*sind(Mm+Ms)-0.015*sind(2*F-2*Dm)+0.011*sind(Mm-4*Dm);
   lat += -0.173*sind(F-2*Dm)-0.055*sind(Mm-F-2*Dm)-0.046*sind(Mm+F-2*Dm)+0.033*sind(F+2*Dm)+0.017*sind(2*Mm+F);
   const rm=r-0.58*cosd(Mm-2*Dm)-0.46*cosd(2*Dm);
-  return { x:rm*cosd(lon)*cosd(lat), y:rm*sind(lon)*cosd(lat), z:rm*sind(lat), lon:rev(lon), r:rm };
+  return { x:rm*cosd(lon)*cosd(lat), y:rm*sind(lon)*cosd(lat), z:rm*sind(lat), lon:rev(lon), lat, r:rm };
 }
 function earthRotation(date, Ls) {
   const ut=date.getUTCHours()+date.getUTCMinutes()/60+date.getUTCSeconds()/3600+date.getUTCMilliseconds()/3.6e6;
@@ -610,6 +612,53 @@ function moonPhaseName(a) {
           [202.5,'보름달(망)'],[247.5,'기우는 달'],[292.5,'하현달'],[337.5,'그믐달']];
   for (const [lim,nm] of t) if (a<lim) return nm;
   return '삭(신월)';
+}
+function julianDate(date) {
+  return date.getTime()/86400000 + 2440587.5;
+}
+function gmstDeg(date) {
+  const jd = julianDate(date);
+  const T = (jd - 2451545.0) / 36525;
+  return rev(280.46061837 + 360.98564736629*(jd - 2451545.0) + 0.000387933*T*T - T*T*T/38710000);
+}
+function eclipticToEquatorial(lon, lat, d) {
+  const eps = 23.4393 - 3.563e-7*d;
+  const cl = cosd(lon), sl = sind(lon), cb = cosd(lat), sb = sind(lat);
+  const x = cl * cb;
+  const y = sl * cb * cosd(eps) - sb * sind(eps);
+  const z = sl * cb * sind(eps) + sb * cosd(eps);
+  return { ra: rev(atan2d(y,x)), dec: Math.asin(Math.max(-1,Math.min(1,z))) * RAD };
+}
+function moonObserverView(date, loc) {
+  const d = dayNumber(date);
+  const sun = sunLM(d);
+  const moon = moonPosition(d, sun);
+  const mEq = eclipticToEquatorial(moon.lon, moon.lat || 0, d);
+  const sEq = eclipticToEquatorial(sun.L, 0, d);
+  const lat = loc.lat;
+  const hourAngle = signedDeg(gmstDeg(date) + loc.lon - mEq.ra);
+  const sinAlt = sind(lat)*sind(mEq.dec) + cosd(lat)*cosd(mEq.dec)*cosd(hourAngle);
+  const altitude = Math.asin(Math.max(-1,Math.min(1,sinAlt))) * RAD;
+  const azimuth = rev(atan2d(
+    -sind(hourAngle),
+    Math.tan(mEq.dec*DEG)*cosd(lat) - sind(lat)*cosd(hourAngle)
+  ));
+  const parallactic = atan2d(
+    sind(hourAngle),
+    Math.tan(lat*DEG)*cosd(mEq.dec) - sind(mEq.dec)*cosd(hourAngle)
+  );
+  const sunRaDelta = (sEq.ra - mEq.ra) * DEG;
+  const brightPoleAngle = atan2d(
+    Math.cos(sEq.dec*DEG) * Math.sin(sunRaDelta),
+    Math.sin(sEq.dec*DEG)*Math.cos(mEq.dec*DEG)
+      - Math.cos(sEq.dec*DEG)*Math.sin(mEq.dec*DEG)*Math.cos(sunRaDelta)
+  );
+  return {
+    altitude,
+    azimuth,
+    parallactic,
+    brightLimbAngle: signedDeg(brightPoleAngle - parallactic),
+  };
 }
 // 전체 상태 (특정 Date 기준 — 8행성 + 달)
 function computeState(date) {
@@ -623,7 +672,8 @@ function computeState(date) {
   const m = moonPosition(d,sun);
   const phaseAngle = rev(m.lon - rev(bodies.earth.lon+180));
   return { date, d, bodies, moonGeo:new THREE.Vector3(m.x,m.z,-m.y), moonDistKm:m.r*EARTH_RADIUS_KM,
-    rotDeg:earthRotation(date,sun.L), phaseAngle, illum:(1-cosd(phaseAngle))/2, phaseName:moonPhaseName(phaseAngle) };
+    rotDeg:earthRotation(date,sun.L), phaseAngle, illum:(1-cosd(phaseAngle))/2,
+    phaseName:moonPhaseName(phaseAngle), moonView:moonObserverView(date, curLoc) };
 }
 function computeEarthMoon(date) {
   const d=dayNumber(date), eh=planetHelio(d,EARTH);
@@ -3486,38 +3536,44 @@ let moonTexReady = false;
 moonTexImg.onload  = () => { moonTexReady = true; lastMoonUpdate = 0; };  // 로드 즉시 한 번 강제 그리기
 moonTexImg.onerror = () => { console.warn('달 텍스처 로드 실패 — fallback 사용'); };
 
-function drawMoonPhase(ctx, cx, cy, r, phaseAngle) {
+function drawMoonPhase(ctx, cx, cy, r, phaseAngle, observerView) {
   const cosA = Math.cos(phaseAngle * Math.PI / 180);
   const illumination = (1 - cosA) / 2;
   const waxing = phaseAngle < 180;
   const D = r * 2;
+  const brightAngle = Number.isFinite(observerView?.brightLimbAngle) ? observerView.brightLimbAngle : 90;
+  const rotation = (90 - brightAngle) * DEG;
 
   // 전체 영역 클리어
   ctx.clearRect(cx-r-3, cy-r-3, D+6, D+6);
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rotation);
 
   // ── 텍스처 로드 전 fallback: 단색 두 톤으로 그리기 ──
   if (!moonTexReady) {
     const LIT = '#d8d2c0', DARK = '#1a1a22';
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fillStyle = DARK; ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2); ctx.fillStyle = DARK; ctx.fill();
     ctx.beginPath();
-    if (waxing) ctx.arc(cx, cy, r, -Math.PI/2,  Math.PI/2);
-    else        ctx.arc(cx, cy, r,  Math.PI/2,  3*Math.PI/2);
+    if (waxing) ctx.arc(0, 0, r, -Math.PI/2,  Math.PI/2);
+    else        ctx.arc(0, 0, r,  Math.PI/2,  3*Math.PI/2);
     ctx.closePath(); ctx.fillStyle = LIT; ctx.fill();
     ctx.beginPath();
-    ctx.ellipse(cx, cy, r * Math.abs(cosA), r, 0, 0, Math.PI*2);
+    ctx.ellipse(0, 0, r * Math.abs(cosA), r, 0, 0, Math.PI*2);
     ctx.fillStyle = (illumination < 0.5) ? DARK : LIT; ctx.fill();
+    ctx.restore();
     return;
   }
 
   // ── Step 1: 원형 clip 내부에 실제 달 텍스처 그리기 ──
   ctx.save();
-  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.clip();
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2); ctx.clip();
   // 텍스처는 cylindrical projection. 원에 직접 매핑하면 가장자리 약간 왜곡되지만
   // 작은 위젯 크기에선 충분히 사실적. 정중앙 부분(달의 보이는 면)이 잘 표시되도록 약간 좁게 샘플
   const srcW = moonTexImg.naturalWidth, srcH = moonTexImg.naturalHeight;
   const sx = srcW * 0.18, sy = srcH * 0.08;
   const sw = srcW * 0.64, sh = srcH * 0.84;
-  ctx.drawImage(moonTexImg, sx, sy, sw, sh, cx-r, cy-r, D, D);
+  ctx.drawImage(moonTexImg, sx, sy, sw, sh, -r, -r, D, D);
 
   // ── Step 2: 그림자 합성 — multiply 모드로 어두운 색을 덮어쓰면 텍스처 디테일 유지하며 어두워짐 ──
   ctx.globalCompositeOperation = 'multiply';
@@ -3525,13 +3581,13 @@ function drawMoonPhase(ctx, cx, cy, r, phaseAngle) {
 
   // 어두운 반원
   ctx.beginPath();
-  if (waxing) ctx.arc(cx, cy, r,  Math.PI/2,  3*Math.PI/2);   // 왼쪽 반원 = 그림자
-  else        ctx.arc(cx, cy, r, -Math.PI/2,    Math.PI/2);   // 오른쪽 반원 = 그림자
+  if (waxing) ctx.arc(0, 0, r,  Math.PI/2,  3*Math.PI/2);   // 왼쪽 반원 = 그림자
+  else        ctx.arc(0, 0, r, -Math.PI/2,    Math.PI/2);   // 오른쪽 반원 = 그림자
   ctx.closePath(); ctx.fillStyle = SHADOW; ctx.fill();
 
   // Terminator 타원 — illumination에 따라 그림자/하이라이트로 보정
   ctx.beginPath();
-  ctx.ellipse(cx, cy, r * Math.abs(cosA), r, 0, 0, Math.PI*2);
+  ctx.ellipse(0, 0, r * Math.abs(cosA), r, 0, 0, Math.PI*2);
   // illumination < 0.5: 그림자 색으로 추가 어둠 / >= 0.5: 흰색(=multiply에서 변화 없음)으로 밝게 회복
   ctx.fillStyle = (illumination < 0.5) ? SHADOW : '#ffffff';
   ctx.fill();
@@ -3541,13 +3597,14 @@ function drawMoonPhase(ctx, cx, cy, r, phaseAngle) {
 
   // ── Step 3: 가장자리 림 라이트 — 입체감 (밝은 면에서 미세한 따뜻한 빛) ──
   ctx.save();
-  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.clip();
-  const rim = ctx.createRadialGradient(cx, cy, r*0.85, cx, cy, r*1.02);
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2); ctx.clip();
+  const rim = ctx.createRadialGradient(0, 0, r*0.85, 0, 0, r*1.02);
   rim.addColorStop(0, 'rgba(255,240,200,0)');
   rim.addColorStop(0.7, 'rgba(255,235,180,0.05)');
   rim.addColorStop(1, 'rgba(70,60,45,0.55)');
   ctx.fillStyle = rim;
-  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
   ctx.restore();
 }
 
@@ -3565,6 +3622,9 @@ function detailedMoonPhase(angle) {
 }
 
 let moonCanvasCtx = null, lastMoonUpdate = 0;
+function invalidateMoonWidget() {
+  lastMoonUpdate = 0;
+}
 function updateMoonWidget(now) {
   if (now - lastMoonUpdate < 500) return;                // 0.5초 폴링
   lastMoonUpdate = now;
@@ -3581,16 +3641,23 @@ function updateMoonWidget(now) {
   }
   const date = new Date(simTime);
   const st = computeState(date);
+  const observerView = st.moonView || moonObserverView(date, curLoc);
   const phase = detailedMoonPhase(st.phaseAngle);
   const lunarAge = st.phaseAngle / 360 * SYNODIC;
   // Canvas 그리기 (CSS 픽셀 기준)
   const cv = $('moonCanvas');
   const cssW = parseInt(getComputedStyle(cv).width) || 110;
-  drawMoonPhase(moonCanvasCtx, cssW/2, cssW/2, cssW/2 - 4, st.phaseAngle);
+  drawMoonPhase(moonCanvasCtx, cssW/2, cssW/2, cssW/2 - 4, st.phaseAngle, observerView);
   // 텍스트 갱신
+  $('mwLoc').textContent = curLoc.name;
   $('mwPhase').textContent = phase.ko + '  ·  ' + phase.en;
   $('mwIllum').textContent = (st.illum * 100).toFixed(1) + '%';
   const _ang = $('mwAngle'); if (_ang) _ang.textContent = st.phaseAngle.toFixed(1) + '°';
+  const altAz = $('mwAltAz');
+  if (altAz) {
+    const below = observerView.altitude < 0 ? ' · 지평선 아래' : '';
+    altAz.textContent = `${observerView.altitude.toFixed(1)}° / ${observerView.azimuth.toFixed(0)}°${below}`;
+  }
   $('mwAge').textContent   = lunarAge.toFixed(1) + '일';
   $('mwTime').textContent  = date.toLocaleString('ko-KR', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
 }
@@ -3813,7 +3880,7 @@ LOCATIONS.forEach((L,idx)=>{
   if (L === curLoc) o.selected = true;        // 부산이 기본으로 선택됨
   tideLocSel.appendChild(o);
 });
-tideLocSel.onchange = () => { curLoc=LOCATIONS[+tideLocSel.value]; drawTideCurve(true); };
+tideLocSel.onchange = () => { curLoc=LOCATIONS[+tideLocSel.value]; drawTideCurve(true); invalidateMoonWidget(); };
 
 let paused = false;
 let timeTravel = null;
@@ -3911,13 +3978,14 @@ function startTimeTravel(targetMs) {
   timeTravel={ targetMs, direction:Math.sign(deltaMs), velocityMsPerSecond:deltaMs/duration };
   paused=false;
   $('btnPause').classList.remove('on');
+  invalidateMoonWidget();
 }
 function jump(unit,amt) {
   startTimeTravel(travelTarget(unit,amt));
 }
 for (const b of document.querySelectorAll('#tmBtns button[data-u]'))
   b.onclick = () => jump(b.dataset.u,+b.dataset.a);
-$('tmReset').onclick = () => { timeTravel=null; simTime=Date.now(); speedIndex=SPEEDS.indexOf(1); syncSpeed(); if(paused)togglePause(); };
+$('tmReset').onclick = () => { timeTravel=null; simTime=Date.now(); speedIndex=SPEEDS.indexOf(1); syncSpeed(); invalidateMoonWidget(); if(paused)togglePause(); };
 
 addEventListener('keydown', e=>{
   if (e.code==='Space'){ e.preventDefault(); togglePause(); }
