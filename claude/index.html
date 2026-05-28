@@ -63,6 +63,15 @@
   #tideLoc, #tidePanel select { background: rgba(40,56,104,.7); color: #e8ecf4;
     border: 1px solid rgba(130,165,240,.3); border-radius: 7px; padding: 3px 6px; font-family: inherit; }
 
+  /* 부산 관측 달 위상 — tide panel 안 실시간 SVG (박사 발화: "부산 달 실시간 + 위상 정확") */
+  .lunar-vis { display: flex; align-items: center; gap: 12px; padding: 9px 11px; margin: 8px 0 7px;
+    background: rgba(40,56,104,0.32); border-radius: 8px; border: 1px solid rgba(120,160,240,0.18); }
+  .lunar-vis svg { flex-shrink: 0; }
+  .lvis-meta { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .lvis-head { font-size: 10.5px; color: #8fd6ff; font-weight: 700; letter-spacing: 0.04em; }
+  .lvis-name { font-size: 13px; font-weight: 800; color: #ffe08a; }
+  .lvis-sub  { font-size: 11px; color: #b0bed8; font-variant-numeric: tabular-nums; }
+
   /* 행성 정보 사이드바 (우측) */
   #sidebar { position: fixed; top: 0; right: 0; z-index: 12; width: 312px; height: 100%;
     padding: 22px 22px; background: rgba(10,14,30,0.93); border-left: 1px solid rgba(120,160,240,0.25);
@@ -127,6 +136,20 @@
 
 <div id="tidePanel" class="panel">
   <div class="th"><span>🌊 조석 · 물때</span><select id="tideLoc" title="조석 곡선 기준 지점"></select></div>
+
+  <div class="lunar-vis" title="현재 시각의 달 위상 — 부산 관측자 시점 (북반구, SVG 매 tick 실시간 갱신)">
+    <svg viewBox="0 0 100 100" width="64" height="64" aria-hidden="true">
+      <circle cx="50" cy="50" r="48" fill="#0f1118"/>
+      <path id="moonLitPath" d="" fill="#ece3c8"/>
+      <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1"/>
+    </svg>
+    <div class="lvis-meta">
+      <div class="lvis-head">🌙 달 위상 · 부산 관측 (실시간)</div>
+      <div class="lvis-name" id="moonPhaseLabel">—</div>
+      <div class="lvis-sub"  id="moonPhaseDetail">조도 — · 위상각 —</div>
+    </div>
+  </div>
+
   <div class="row"><span class="k">음력</span><span class="v" id="tdLunar">—</span></div>
   <div class="row"><span class="k">물때</span><span class="v" id="tdMul">—</span></div>
   <div class="row"><span class="k">조석 계수</span><span class="v" id="tdCoef">—</span></div>
@@ -335,6 +358,28 @@ function moonPhaseName(a) {
           [202.5,'보름달(망)'],[247.5,'기우는 달'],[292.5,'하현달'],[337.5,'그믐달']];
   for (const [lim,nm] of t) if (a<lim) return nm;
   return '삭(신월)';
+}
+// SVG path for moon phase disk — standard astronomical formula.
+// phaseDeg: 0=신월, 90=상현, 180=망, 270=하현. 북반구 부산 기준.
+// 외곽 반원(밝은 쪽 면) + terminator ellipse 호 두 단위.
+function moonPhaseSVGPath(phaseDeg, r) {
+  r = r || 48;
+  const k = (1 - cosd(phaseDeg)) / 2;        // illuminated fraction 0..1
+  const waxing = phaseDeg < 180;              // true=차오름(오른쪽 밝음)
+  const rx = Math.max(0.5, Math.abs(1 - 2*k) * r);
+  const yT = 50 - r, yB = 50 + r;
+  const outerSweep = waxing ? 1 : 0;
+  const termSweep = waxing ? (k < 0.5 ? 1 : 0) : (k < 0.5 ? 0 : 1);
+  return 'M 50 ' + yT + ' A ' + r + ' ' + r + ' 0 0 ' + outerSweep + ' 50 ' + yB +
+         ' A ' + rx + ' ' + r + ' 0 0 ' + termSweep + ' 50 ' + yT + ' Z';
+}
+function updateBusanMoonPhase(st) {
+  const p = document.getElementById('moonLitPath');
+  if (p) p.setAttribute('d', moonPhaseSVGPath(st.phaseAngle));
+  const lbl = document.getElementById('moonPhaseLabel');
+  if (lbl) lbl.textContent = st.phaseName;
+  const det = document.getElementById('moonPhaseDetail');
+  if (det) det.textContent = '조도 ' + (st.illum*100).toFixed(1) + '% · 위상각 ' + st.phaseAngle.toFixed(1) + '°';
 }
 // 전체 상태 (특정 Date 기준 — 8행성 + 달)
 function computeState(date) {
@@ -1026,6 +1071,7 @@ function animate() {
 
   const st=computeState(new Date(simTime));
   updateScene(st);
+  updateBusanMoonPhase(st);   // 부산 관측 달 위상 SVG 매 tick 실시간 갱신
   if (tideOn) { const ts=tideState(st); updateOcean(ts); updateTideUI(ts,now); }
 
   // 카메라 — 부드러운 이동(트윈) 또는 초점 추적
