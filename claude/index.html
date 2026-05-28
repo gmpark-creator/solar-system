@@ -273,6 +273,7 @@
       <div class="mwInfo">
         <div class="mwPhaseName" id="mwPhase">—</div>
         <div class="mwRow"><span class="k">조명률</span><span class="v" id="mwIllum">—</span></div>
+        <div class="mwRow"><span class="k">위상각</span><span class="v" id="mwAngle">—</span></div>
         <div class="mwRow"><span class="k">달 나이</span><span class="v" id="mwAge">—</span></div>
         <div class="mwRow"><span class="k">관측 시각</span><span class="v" id="mwTime">—</span></div>
       </div>
@@ -3589,6 +3590,7 @@ function updateMoonWidget(now) {
   // 텍스트 갱신
   $('mwPhase').textContent = phase.ko + '  ·  ' + phase.en;
   $('mwIllum').textContent = (st.illum * 100).toFixed(1) + '%';
+  const _ang = $('mwAngle'); if (_ang) _ang.textContent = st.phaseAngle.toFixed(1) + '°';
   $('mwAge').textContent   = lunarAge.toFixed(1) + '일';
   $('mwTime').textContent  = date.toLocaleString('ko-KR', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
 }
